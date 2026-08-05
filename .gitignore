@@ -1,0 +1,25 @@
+# Gradle / Java Build artifacts
+.gradle/
+**/build/
+!gradle/wrapper/gradle-wrapper.jar
+bin/
+*.class
+
+# Node / Vite Build artifacts
+**/node_modules/
+**/dist/
+.output/
+
+# IDE files
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+
+# Environment & Temp logs
+*.log
+.env
+.DS_Store
+Thumbs.db

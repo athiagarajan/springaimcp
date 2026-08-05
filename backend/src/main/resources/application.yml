@@ -1,0 +1,41 @@
+server:
+  port: 8080
+
+spring:
+  main:
+    allow-bean-definition-overriding: true
+  application:
+    name: backend
+  datasource:
+    url: jdbc:postgresql://localhost:5432/templeinfo
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+  r2dbc:
+    url: r2dbc:postgresql://localhost:5432/templeinfo
+    username: postgres
+    password: postgres
+  ai:
+    ollama:
+      base-url: http://localhost:11434
+      init:
+        pull-model-strategy: never
+      client:
+        read-timeout: 300s
+      chat:
+        options:
+          model: qwen2.5-coder:latest
+          temperature: 0.1
+    mcp:
+      server:
+        name: springaimcp-server
+        version: 1.0.0
+        transport: sse
+        port: 8081
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+  api-docs:
+    path: /v3/api-docs
