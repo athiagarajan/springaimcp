@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Send, Sparkles, X, RefreshCw } from 'lucide-react';
+import { Send, Sparkles, X, RefreshCw, RotateCcw } from 'lucide-react';
 
 interface PromptBarProps {
   onSearch: (prompt: string) => void;
+  onReset: () => void;
   isLoading: boolean;
 }
 
@@ -13,7 +14,7 @@ const PRESET_PROMPTS = [
   "Temples located near airports with accommodation options"
 ];
 
-export const PromptBar: React.FC<PromptBarProps> = ({ onSearch, isLoading }) => {
+export const PromptBar: React.FC<PromptBarProps> = ({ onSearch, onReset, isLoading }) => {
   const [prompt, setPrompt] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -26,6 +27,11 @@ export const PromptBar: React.FC<PromptBarProps> = ({ onSearch, isLoading }) => 
   const handlePresetClick = (preset: string) => {
     setPrompt(preset);
     onSearch(preset);
+  };
+
+  const handleReset = () => {
+    setPrompt('');
+    onReset();
   };
 
   return (
@@ -73,20 +79,34 @@ export const PromptBar: React.FC<PromptBarProps> = ({ onSearch, isLoading }) => 
         </div>
       </form>
 
-      <div className="flex items-center gap-2 flex-wrap text-xs">
-        <span className="text-slate-400 font-mono text-[11px]">Suggestions:</span>
-        {PRESET_PROMPTS.map((preset, index) => (
-          <button
-            key={index}
-            type="button"
-            onClick={() => handlePresetClick(preset)}
-            className="bg-slate-800/60 hover:bg-indigo-900/40 text-slate-300 hover:text-indigo-200 border border-slate-700/50 hover:border-indigo-500/40 px-3 py-1 rounded-full transition text-[11px]"
-            disabled={isLoading}
-          >
-            {preset}
-          </button>
-        ))}
+      <div className="flex items-center justify-between gap-3 flex-wrap text-xs pt-1">
+        <div className="flex items-center gap-2 flex-wrap flex-1">
+          <span className="text-slate-400 font-mono text-[11px]">Suggestions:</span>
+          {PRESET_PROMPTS.map((preset, index) => (
+            <button
+              key={index}
+              type="button"
+              onClick={() => handlePresetClick(preset)}
+              className="bg-slate-800/60 hover:bg-indigo-900/40 text-slate-300 hover:text-indigo-200 border border-slate-700/50 hover:border-indigo-500/40 px-3 py-1 rounded-full transition text-[11px]"
+              disabled={isLoading}
+            >
+              {preset}
+            </button>
+          ))}
+        </div>
+
+        <button
+          type="button"
+          onClick={handleReset}
+          className="flex items-center gap-1.5 bg-slate-900 hover:bg-rose-950/60 text-slate-300 hover:text-rose-200 border border-slate-700/80 hover:border-rose-500/50 px-3.5 py-1.5 rounded-xl transition-all text-xs font-semibold shadow-md cursor-pointer ml-auto"
+          disabled={isLoading}
+          title="Reset prompt, logs, details modal and map pins back to initial state"
+        >
+          <RotateCcw className="w-3.5 h-3.5 text-rose-400" />
+          <span>Reset Search & Pins</span>
+        </button>
       </div>
     </div>
   );
 };
+

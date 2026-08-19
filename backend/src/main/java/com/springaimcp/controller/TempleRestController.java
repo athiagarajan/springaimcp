@@ -33,4 +33,10 @@ public class TempleRestController {
     public Mono<List<Temple>> searchTemples(@RequestParam(required = false) String keyword) {
         return templeAiService.search(keyword);
     }
+
+    @Operation(summary = "Translate temple details to another language (Pattern A)", description = "Translates temple descriptive fields to target language (e.g. 'ta' for Tamil) via LLM pass")
+    @GetMapping("/{id}/translate")
+    public Mono<Temple> translateTemple(@PathVariable Long id, @RequestParam(defaultValue = "ta") String targetLang) {
+        return templeAiService.translateTemple(id, targetLang);
+    }
 }

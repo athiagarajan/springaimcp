@@ -9,6 +9,7 @@ import { Temple } from './types/temple';
 import { fetchAllTemples, searchTemples, streamDynamicQuery } from './services/api';
 
 export const App: React.FC = () => {
+  const [allTemples, setAllTemples] = useState<Temple[]>([]);
   const [mapTemples, setMapTemples] = useState<Temple[]>([]);
   const [tableTemples, setTableTemples] = useState<Temple[]>([]);
   const [selectedTemple, setSelectedTemple] = useState<Temple | null>(null);
@@ -24,7 +25,8 @@ export const App: React.FC = () => {
     try {
       setIsLoadingTemples(true);
       const data = await fetchAllTemples();
-      // On start: populate map with initial temples, but leave bottom table empty
+      // On start: store all temples, populate map with all pins (with clustering), but leave bottom table empty
+      setAllTemples(data);
       setMapTemples(data);
       setTableTemples([]);
     } catch (err) {
@@ -32,6 +34,16 @@ export const App: React.FC = () => {
     } finally {
       setIsLoadingTemples(false);
     }
+  };
+
+  const handleReset = () => {
+    // Empty prompt details, streaming logs, selected modal details, table results, and restore all pins on map
+    setStreamLog('');
+    setSelectedTemple(null);
+    setTableTemples([]);
+    setMapTemples(allTemples);
+    setIsStreaming(false);
+    setIsLoadingTemples(false);
   };
 
   const handleSearch = async (prompt: string) => {
@@ -74,7 +86,7 @@ export const App: React.FC = () => {
       <Header />
 
       <main className="flex-1 max-w-7xl w-full mx-auto p-6 space-y-6">
-        <PromptBar onSearch={handleSearch} isLoading={isStreaming} />
+        <PromptBar onSearch={handleSearch} onReset={handleReset} isLoading={isStreaming} />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[420px]">
           <StreamReasoningLog streamContent={streamLog} isStreaming={isStreaming} />

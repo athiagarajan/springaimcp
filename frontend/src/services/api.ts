@@ -32,6 +32,21 @@ export const searchTemples = async (query: string): Promise<Temple[]> => {
   return response.json();
 };
 
+export const fetchTempleTranslation = async (id: number, targetLang: string = 'ta'): Promise<Temple> => {
+  const response = await fetch(`/api/v1/temples/${id}/translate?targetLang=${encodeURIComponent(targetLang)}`, {
+    headers: {
+      Authorization: BASIC_AUTH_HEADER,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to translate temple details');
+  }
+
+  return response.json();
+};
+
 export const streamDynamicQuery = (
   prompt: string,
   onChunk: (chunk: string) => void,
@@ -66,9 +81,9 @@ export const streamDynamicQuery = (
     onComplete();
   });
 
-  eventSource.onerror = () => {
-    // Clean stream closure by server
+  eventSource.onerror = (err) => {
     eventSource.close();
+    if (onError) onError(err);
     onComplete();
   };
 

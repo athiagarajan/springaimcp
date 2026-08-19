@@ -1,8 +1,9 @@
 package com.springaimcp.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.springaimcp.model.Temple;
 import com.springaimcp.repository.TempleRepository;
-import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -14,12 +15,31 @@ import java.util.Map;
 @Service
 public class TempleAiService {
 
-    private final ChatClient chatClient;
     private final TempleRepository templeRepository;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public TempleAiService(ChatClient.Builder builder, TempleRepository templeRepository) {
-        this.chatClient = builder.build();
+    @org.springframework.beans.factory.annotation.Value("${temple.translation.gemini-api-key:}")
+    private String geminiApiKey;
+
+    public TempleAiService(TempleRepository templeRepository) {
         this.templeRepository = templeRepository;
+    }
+
+    public List<Temple> getAllTemples() {
+        return templeRepository.executeDynamicSql("SELECT * FROM temples ORDER BY id ASC");
+    }
+
+    public Mono<List<Temple>> search(String keyword) {
+        if (keyword == null || keyword.trim().isEmpty()) {
+            return Mono.just(getAllTemples());
+        }
+
+        return executeAiSearch(keyword)
+                .map(resultMap -> {
+                    @SuppressWarnings("unchecked")
+                    List<Temple> temples = (List<Temple>) resultMap.getOrDefault("temples", List.of());
+                    return temples;
+                });
     }
 
     public Mono<Map<String, Object>> executeAiSearch(String prompt) {
@@ -33,33 +53,29 @@ public class TempleAiService {
             CRITICAL RULES:
             1. ALWAYS start your query with 'SELECT * FROM temples'.
             2. Output ONLY raw executable SQL SELECT queries. Do NOT write markdown prose, explanations, or inline comments.
-            3. Use ONLY real columns from the schema listed above. Note: hf_lat and hf_lan are ALREADY numeric double precision columns. Do NOT cast or regex hf_lat/hf_lan.
+            3. Use ONLY real columns from the schema listed above. Note: hf_lat and hf_lan are double precision columns.
             4. Deity Matching Rules:
-               - For 'murugan' / 'muruga' / 'subramaniya' / 'velappar' / 'arumugam' temples, match:
-                 (LOWER(moolavar) LIKE '%muruga%' OR LOWER(name) LIKE '%muruga%' OR LOWER(moolavar) LIKE '%subramanya%' OR LOWER(name) LIKE '%subramania%' OR LOWER(moolavar) LIKE '%swaminatha%' OR LOWER(moolavar) LIKE '%velappar%' OR LOWER(moolavar) LIKE '%nayinar%')
+               - For 'murugan' / 'muruga' / 'subramaniya' / 'swaminatha' / 'velappar' temples, match:
+                 (LOWER(moolavar) LIKE '%murug%' OR LOWER(moolavar) LIKE '%subramany%' OR LOWER(moolavar) LIKE '%swaminath%' OR LOWER(name) LIKE '%murug%' OR LOWER(name) LIKE '%swaminath%')
             5. Known City Coordinates:
                - 'sivakasi' -> lat: 9.4533, lon: 77.7963
                - 'tanjore' / 'thanjavur' -> lat: 10.7870, lon: 79.1378
                - 'tiruchi' / 'trichy' -> lat: 10.7905, lon: 78.7047
                - 'madurai' -> lat: 9.9252, lon: 78.1198
                - 'chennai' -> lat: 13.0827, lon: 80.2707
-            6. Distance Constraints ('within N km', 'in a radius of N km', 'close to'):
-               - Extract the specified distance N (e.g. 100 km -> N=100; default N=100).
-               - Convert distance to coordinate delta in degrees: delta_deg = N / 111.0 (e.g. 100 km -> 0.90 deg; 50 km -> 0.45 deg).
-               - Use coordinate bounding box filter matching target location lat/lon:
-                 ABS(hf_lat - target_lat) <= (N / 111.0) AND ABS(hf_lan - target_lon) <= (N / 111.0)
-                 (Example for 100 km from sivakasi [9.4533, 77.7963]: ABS(hf_lat - 9.4533) <= 0.90 AND ABS(hf_lan - 77.7963) <= 0.90)
-            7. Respect quantity limits specified in prompt (e.g. 'list 3', 'only 2' -> append LIMIT N).
-            8. Do NOT use PostGIS functions (ST_DWithin, ST_MakePoint, ST_SetSRID).
+            6. Distance Constraints ('within N km', 'near', 'close to'):
+               - Convert distance N km to coordinate delta degrees: delta_deg = N / 100.0 (e.g. 100 km -> 1.0 deg; 50 km -> 0.5 deg).
+               - Use bounding box filter:
+                 ABS(hf_lat - target_lat) <= (N / 100.0) AND ABS(hf_lan - target_lon) <= (N / 100.0)
+                 (Example for 100 km from tanjore [10.7870, 79.1378]: ABS(hf_lat - 10.7870) <= 1.0 AND ABS(hf_lan - 79.1378) <= 1.0)
+            7. Respect quantity limits specified in prompt (e.g. 'at best 2', 'only 2' -> append LIMIT 2).
+            8. Do NOT use PostGIS functions (ST_DWithin, ST_MakePoint).
             """;
 
         return Mono.fromCallable(() -> {
             long llmStart = System.currentTimeMillis();
-            String rawContent = chatClient.prompt()
-                    .system(systemPrompt)
-                    .user(prompt)
-                    .call()
-                    .content();
+            String fullPrompt = systemPrompt + "\nUser Prompt: " + prompt;
+            String rawContent = callGeminiApi(fullPrompt, false);
             long llmEnd = System.currentTimeMillis();
             return Map.of(
                 "rawContent", rawContent != null ? rawContent : "",
@@ -101,7 +117,7 @@ public class TempleAiService {
             );
         })
         .onErrorResume(err -> {
-            System.err.println("LLM ChatClient Exception: " + err.getMessage());
+            System.err.println("Gemini Search Exception: " + err.getMessage());
             return Mono.just(Map.of(
                 "rawContent", "ERROR: " + err.getMessage(),
                 "generatedSql", "-- LLM Connection Error: " + err.getMessage(),
@@ -116,9 +132,7 @@ public class TempleAiService {
 
     private String sanitizeSql(String raw) {
         if (raw == null || raw.isBlank()) return "";
-        // 1. Remove markdown backticks
         String clean = raw.replaceAll("```sql", "").replaceAll("```", "").trim();
-        // 2. Strip single-line SQL comments (-- ...)
         StringBuilder sb = new StringBuilder();
         for (String line : clean.split("\n")) {
             int commentIdx = line.indexOf("--");
@@ -129,44 +143,255 @@ public class TempleAiService {
                 sb.append(line.trim()).append(" ");
             }
         }
-        String sql = sb.toString().trim();
-        // 3. Ensure SELECT * FROM temples is used so JDBC RowMapper has all required columns
+        String res = sb.toString().trim();
+
+        // Automatic SQL Syntax Repair
+        long openParens = res.chars().filter(ch -> ch == '(').count();
+        long closeParens = res.chars().filter(ch -> ch == ')').count();
+        while (closeParens < openParens) {
+            res += ")";
+            closeParens++;
+        }
+
+        String sql = res;
         if (sql.toLowerCase().startsWith("select ") && !sql.toLowerCase().startsWith("select *")) {
             sql = sql.replaceAll("(?i)^select\\s+.*?\\s+from\\s+temples", "SELECT * FROM temples");
         }
         return sql;
     }
 
+    public Mono<Temple> translateTemple(Long id, String targetLang) {
+        return Mono.fromCallable(() -> {
+            String sql = "SELECT * FROM temples WHERE id = " + id;
+            List<Temple> found = templeRepository.executeDynamicSql(sql);
+            if (found.isEmpty()) {
+                return null;
+            }
+            Temple original = found.get(0);
+            return translateWithGemini(original, geminiApiKey);
+        })
+        .subscribeOn(Schedulers.boundedElastic());
+    }
+
+    private Temple translateWithGemini(Temple original, String apiKey) {
+        try {
+            String prompt = String.format("""
+                You are an expert English to Tamil translator specializing in South Indian temples and culture.
+                Translate ALL descriptive text fields into fluent native Tamil script (தமிழ் எழுத்துக்கள்).
+
+                Temple details to translate:
+                Name: %s
+                Historical Name: %s
+                City: %s
+                District: %s
+                State: %s
+                Moolavar: %s
+                Urchavar: %s
+                Amman / Thayar: %s
+                Thala Virutcham: %s
+                Theertham: %s
+                Singers: %s
+                Old Year: %s
+                Agamam / Pooja: %s
+                Speciality: %s
+                History: %s
+                Address: %s
+                Location: %s
+                Opening Time: %s
+                Festival: %s
+                Nearest Railway Station: %s
+                Nearest Airport: %s
+                Accommodation: %s
+                Prayers: %s
+                Thanks Giving: %s
+                Greatness: %s
+                Features: %s
+
+                CRITICAL INSTRUCTIONS:
+                Return ONLY a valid JSON object with the exact keys:
+                "name", "historicalName", "city", "district", "state", "moolavar", "urchavar", "ammanThayar",
+                "thalaVirutcham", "theertham", "singers", "oldYear", "agamamPooja", "speciality", "history",
+                "address", "location", "openingTime", "festival", "nearByRailwayStation", "nearByAirport",
+                "accommodation", "prayers", "thanksGiving", "greatness", "features"
+                All values MUST be in Tamil script (தமிழ் எழுத்துக்கள்).
+                """,
+                escapeJson(original.name(), 0),
+                escapeJson(original.historicalName(), 0),
+                escapeJson(original.city(), 0),
+                escapeJson(original.district(), 0),
+                escapeJson(original.state(), 0),
+                escapeJson(original.moolavar(), 0),
+                escapeJson(original.urchavar(), 0),
+                escapeJson(original.ammanThayar(), 0),
+                escapeJson(original.thalaVirutcham(), 0),
+                escapeJson(original.theertham(), 0),
+                escapeJson(original.singers(), 0),
+                escapeJson(original.oldYear(), 0),
+                escapeJson(original.agamamPooja(), 0),
+                escapeJson(original.speciality(), 0),
+                escapeJson(original.history(), 0),
+                escapeJson(original.address(), 0),
+                escapeJson(original.location(), 0),
+                escapeJson(original.openingTime(), 0),
+                escapeJson(original.festival(), 0),
+                escapeJson(original.nearByRailwayStation(), 0),
+                escapeJson(original.nearByAirport(), 0),
+                escapeJson(original.accommodation(), 0),
+                escapeJson(original.prayers(), 0),
+                escapeJson(original.thanksGiving(), 0),
+                escapeJson(original.greatness(), 0),
+                escapeJson(original.features(), 0)
+            );
+
+            String jsonText = callGeminiApi(prompt, true);
+            return parseTranslatedTemple(original, jsonText);
+        } catch (Exception e) {
+            System.err.println("Gemini Flash translation failed: " + e.getMessage());
+            return original;
+        }
+    }
+
+    private String callGeminiApi(String promptText, boolean jsonMode) {
+        Map<String, Object> part = Map.of("text", promptText);
+        Map<String, Object> contentMap = Map.of("parts", List.of(part));
+        Map<String, Object> genConfig = jsonMode
+                ? Map.of("temperature", 0.1, "responseMimeType", "application/json")
+                : Map.of("temperature", 0.1);
+
+        Map<String, Object> reqBody = Map.of("contents", List.of(contentMap), "generationConfig", genConfig);
+
+        String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key=" + geminiApiKey;
+        org.springframework.web.client.RestClient restClient = org.springframework.web.client.RestClient.create();
+
+        String responseStr = null;
+        Exception lastException = null;
+
+        for (int attempt = 1; attempt <= 3; attempt++) {
+            try {
+                responseStr = restClient.post()
+                        .uri(url)
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .body(reqBody)
+                        .retrieve()
+                        .body(String.class);
+                if (responseStr != null && !responseStr.isBlank()) {
+                    break;
+                }
+            } catch (Exception ex) {
+                lastException = ex;
+                System.err.println("Gemini Flash attempt " + attempt + " failed: " + ex.getMessage());
+                if (attempt < 3) {
+                    try { Thread.sleep(1000); } catch (InterruptedException ignored) {}
+                }
+            }
+        }
+
+        if (responseStr == null || responseStr.isBlank()) {
+            throw new RuntimeException("Gemini Flash API call failed after 3 attempts: " + (lastException != null ? lastException.getMessage() : "empty response"));
+        }
+
+        try {
+            JsonNode respNode = objectMapper.readTree(responseStr);
+            return respNode.path("candidates").get(0).path("content").path("parts").get(0).path("text").asText();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to parse Gemini API JSON response: " + e.getMessage(), e);
+        }
+    }
+
+    private String escapeJson(String val, int maxLen) {
+        if (val == null) return "";
+        String clean = val.replace("\"", "\\\"").replace("\n", " ");
+        if (maxLen > 0 && clean.length() > maxLen) {
+            return clean.substring(0, maxLen) + "...";
+        }
+        return clean;
+    }
+
+    private Temple parseTranslatedTemple(Temple original, String rawJson) {
+        if (rawJson == null || rawJson.isBlank()) {
+            return original;
+        }
+        try {
+            String cleanJson = rawJson.replaceAll("```json", "").replaceAll("```", "").trim();
+            int firstBrace = cleanJson.indexOf('{');
+            if (firstBrace != -1) {
+                cleanJson = cleanJson.substring(firstBrace);
+            }
+            if (!cleanJson.endsWith("}")) {
+                cleanJson = cleanJson + "\"}";
+            }
+            JsonNode root = objectMapper.readTree(cleanJson);
+
+            return new Temple(
+                original.id(),
+                getTextOrDefault(root, "name", original.name()),
+                getTextOrDefault(root, "moolavar", original.moolavar()),
+                getTextOrDefault(root, "urchavar", original.urchavar()),
+                getTextOrDefault(root, "ammanThayar", original.ammanThayar()),
+                getTextOrDefault(root, "thalaVirutcham", original.thalaVirutcham()),
+                getTextOrDefault(root, "theertham", original.theertham()),
+                getTextOrDefault(root, "agamamPooja", original.agamamPooja()),
+                getTextOrDefault(root, "oldYear", original.oldYear()),
+                getTextOrDefault(root, "historicalName", original.historicalName()),
+                getTextOrDefault(root, "city", original.city()),
+                getTextOrDefault(root, "district", original.district()),
+                getTextOrDefault(root, "state", original.state()),
+                getTextOrDefault(root, "singers", original.singers()),
+                getTextOrDefault(root, "festival", original.festival()),
+                original.generalInformation(),
+                getTextOrDefault(root, "address", original.address()),
+                original.phone(),
+                getTextOrDefault(root, "openingTime", original.openingTime()),
+                getTextOrDefault(root, "speciality", original.speciality()),
+                getTextOrDefault(root, "prayers", original.prayers()),
+                getTextOrDefault(root, "thanksGiving", original.thanksGiving()),
+                getTextOrDefault(root, "greatness", original.greatness()),
+                getTextOrDefault(root, "history", original.history()),
+                getTextOrDefault(root, "features", original.features()),
+                original.hfLat(),
+                original.hfLan(),
+                getTextOrDefault(root, "location", original.location()),
+                getTextOrDefault(root, "nearByAirport", original.nearByAirport()),
+                getTextOrDefault(root, "nearByRailwayStation", original.nearByRailwayStation()),
+                getTextOrDefault(root, "accommodation", original.accommodation())
+            );
+        } catch (Exception e) {
+            System.err.println("Failed to parse translated JSON: " + e.getMessage() + "\nRaw content: " + rawJson);
+            return original;
+        }
+    }
+
+    private String getTextOrDefault(JsonNode node, String fieldName, String defaultValue) {
+        if (node != null && node.has(fieldName) && !node.get(fieldName).isNull() && !node.get(fieldName).asText().isBlank()) {
+            return node.get(fieldName).asText();
+        }
+        return defaultValue;
+    }
+
     public Flux<String> streamDynamicQuery(String prompt) {
         return executeAiSearch(prompt)
-                .flatMapMany(aiResult -> {
-                    String rawContent = (String) aiResult.get("rawContent");
-                    String sql = (String) aiResult.get("generatedSql");
-                    @SuppressWarnings("unchecked")
-                    List<Temple> temples = (List<Temple>) aiResult.get("temples");
-                    long llmTimeMs = (Long) aiResult.getOrDefault("llmTimeMs", 0L);
-                    long dbTimeMs = (Long) aiResult.getOrDefault("dbTimeMs", 0L);
-                    long totalTimeMs = (Long) aiResult.getOrDefault("totalTimeMs", 0L);
-                    String dbStatus = (String) aiResult.getOrDefault("dbStatus", "OK");
-
+                .flatMapMany(map -> {
                     StringBuilder log = new StringBuilder();
-                    log.append("🧠 SPRING AI LLM REASONING & SQL ENGINE LOG\n");
-                    log.append("═══════════════════════════════════════════════════════════════\n\n");
+                    String rawContent = (String) map.get("rawContent");
+                    String sql = (String) map.get("generatedSql");
+                    String dbStatus = (String) map.get("dbStatus");
+                    Long llmTimeMs = (Long) map.get("llmTimeMs");
+                    Long dbTimeMs = (Long) map.get("dbTimeMs");
+                    Long totalTimeMs = (Long) map.get("totalTimeMs");
+                    @SuppressWarnings("unchecked")
+                    List<Temple> temples = (List<Temple>) map.get("temples");
 
-                    log.append("1️⃣ SYSTEM & INFERENCE ENVIRONMENT\n");
+                    log.append("1️⃣ INITIATING SPRING AI NATURAL LANGUAGE SEARCH PIPELINE\n");
                     log.append("---------------------------------------------------------------\n");
-                    log.append("   • LLM Engine       : Ollama (qwen2.5-coder:latest)\n");
-                    log.append("   • Endpoint         : http://localhost:11434\n");
-                    log.append("   • Database Target  : PostgreSQL ('templeinfo' db, 'temples' table - 31 columns)\n");
+                    log.append("   • Provider         : Google Gemini Flash Cloud API\n");
+                    log.append("   • Database Target  : PostgreSQL ('templeinfo' db, 'temples' table)\n");
                     log.append("   • Input Prompt     : \"").append(prompt).append("\"\n\n");
 
                     log.append("2️⃣ LLM NL-TO-SQL REASONING & QUERY FORMATION\n");
                     log.append("---------------------------------------------------------------\n");
-                    log.append("   • Injected Schema  : id, name, moolavar, city, district, state, address, speciality, hf_lat, hf_lan...\n");
-                    log.append("   • Inference Time   : ").append(llmTimeMs).append(" ms\n");
+                    log.append("   • Inference Time   : ").append(llmTimeMs != null ? llmTimeMs : 0).append(" ms\n");
                     log.append("   • Raw Model Output :\n");
-                    log.append("     ").append(rawContent != null ? rawContent.replace("\n", "\n     ") : "N/A").append("\n");
-                    log.append("   • Sanitization     : Stripped backticks, removed inline comments, enforced SELECT *\n\n");
+                    log.append("     ").append(rawContent != null ? rawContent.replace("\n", "\n     ") : "N/A").append("\n\n");
 
                     log.append("3️⃣ FINAL GENERATED POSTGRESQL QUERY\n");
                     log.append("---------------------------------------------------------------\n");
@@ -175,23 +400,20 @@ public class TempleAiService {
                     log.append("4️⃣ DATABASE EXECUTION METRICS\n");
                     log.append("---------------------------------------------------------------\n");
                     log.append("   • Execution Status : ").append(dbStatus).append("\n");
-                    log.append("   • DB Query Time    : ").append(dbTimeMs).append(" ms\n");
-                    log.append("   • Total Pipeline   : ").append(totalTimeMs).append(" ms\n");
+                    log.append("   • DB Query Time    : ").append(dbTimeMs != null ? dbTimeMs : 0).append(" ms\n");
+                    log.append("   • Total Pipeline   : ").append(totalTimeMs != null ? totalTimeMs : 0).append(" ms\n");
                     log.append("   • Matching Records : ").append(temples != null ? temples.size() : 0).append("\n\n");
 
-                    log.append("5️⃣ MATCHING TEMPLE DATASETS\n");
+                    log.append("5️⃣ MATCHING TEMPLE SUMMARY\n");
                     log.append("---------------------------------------------------------------\n");
                     if (temples != null && !temples.isEmpty()) {
                         for (int i = 0; i < temples.size(); i++) {
                             Temple t = temples.get(i);
-                            log.append(String.format("   [%d] %s\n       City/District : %s, %s\n       Moolavar      : %s\n       GPS Coords    : [%s, %s]\n",
+                            log.append(String.format("   [%d] %s (%s, %s)\n",
                                 i + 1,
                                 t.name(),
                                 t.city() != null ? t.city() : "N/A",
-                                t.district() != null ? t.district() : t.state(),
-                                t.moolavar() != null ? t.moolavar() : "N/A",
-                                t.hfLat() != null ? t.hfLat() : "N/A",
-                                t.hfLan() != null ? t.hfLan() : "N/A"
+                                t.district() != null ? t.district() : (t.state() != null ? t.state() : "N/A")
                             ));
                         }
                     } else {
@@ -199,19 +421,6 @@ public class TempleAiService {
                     }
 
                     return Flux.just(log.toString());
-                });
-    }
-
-    public List<Temple> getAllTemples() {
-        return templeRepository.findAll();
-    }
-
-    public Mono<List<Temple>> search(String keyword) {
-        return executeAiSearch(keyword)
-                .map(aiResult -> {
-                    @SuppressWarnings("unchecked")
-                    List<Temple> temples = (List<Temple>) aiResult.get("temples");
-                    return temples;
                 });
     }
 }

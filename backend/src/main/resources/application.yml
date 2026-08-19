@@ -7,25 +7,15 @@ spring:
   application:
     name: backend
   datasource:
-    url: jdbc:postgresql://localhost:5432/templeinfo
-    username: postgres
-    password: postgres
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://pg-2ff57b18-alagesan-0eb8.b.aivencloud.com:15331/tutorsys?sslmode=require}
+    username: ${SPRING_DATASOURCE_USERNAME:avnadmin}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
     driver-class-name: org.postgresql.Driver
   r2dbc:
-    url: r2dbc:postgresql://localhost:5432/templeinfo
-    username: postgres
-    password: postgres
+    url: ${SPRING_R2DBC_URL:r2dbc:postgresql://pg-2ff57b18-alagesan-0eb8.b.aivencloud.com:15331/tutorsys?sslmode=require}
+    username: ${SPRING_R2DBC_USERNAME:avnadmin}
+    password: ${SPRING_R2DBC_PASSWORD:}
   ai:
-    ollama:
-      base-url: http://localhost:11434
-      init:
-        pull-model-strategy: never
-      client:
-        read-timeout: 300s
-      chat:
-        options:
-          model: qwen2.5-coder:latest
-          temperature: 0.1
     mcp:
       server:
         name: springaimcp-server
@@ -39,3 +29,7 @@ springdoc:
     enabled: true
   api-docs:
     path: /v3/api-docs
+
+temple:
+  translation:
+    gemini-api-key: ${GEMINI_API_KEY:}
