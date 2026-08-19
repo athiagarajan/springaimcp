@@ -7,12 +7,12 @@ spring:
   application:
     name: backend
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://pg-2ff57b18-alagesan-0eb8.b.aivencloud.com:15331/tutorsys?sslmode=require}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://pg-2ff57b18-alagesan-0eb8.b.aivencloud.com:15331/templeinfo?sslmode=require}
     username: ${SPRING_DATASOURCE_USERNAME:avnadmin}
     password: ${SPRING_DATASOURCE_PASSWORD:}
     driver-class-name: org.postgresql.Driver
   r2dbc:
-    url: ${SPRING_R2DBC_URL:r2dbc:postgresql://pg-2ff57b18-alagesan-0eb8.b.aivencloud.com:15331/tutorsys?sslmode=require}
+    url: ${SPRING_R2DBC_URL:r2dbc:postgresql://pg-2ff57b18-alagesan-0eb8.b.aivencloud.com:15331/templeinfo?sslmode=require}
     username: ${SPRING_R2DBC_USERNAME:avnadmin}
     password: ${SPRING_R2DBC_PASSWORD:}
   ai:
