@@ -1,0 +1,39 @@
+services:
+  # 1. Spring Boot Backend Web Service
+  - type: web
+    name: springaimcp-backend
+    runtime: docker
+    dockerContext: ./backend
+    dockerfilePath: ./backend/Dockerfile
+    plan: free
+    envVars:
+      - key: SPRING_DATASOURCE_URL
+        value: jdbc:postgresql://pg-2ff57b18-alagesan-0eb8.b.aivencloud.com:15331/templeinfo?sslmode=require
+      - key: SPRING_DATASOURCE_USERNAME
+        value: avnadmin
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false
+      - key: SPRING_R2DBC_URL
+        value: r2dbc:postgresql://pg-2ff57b18-alagesan-0eb8.b.aivencloud.com:15331/templeinfo?sslmode=require
+      - key: SPRING_R2DBC_USERNAME
+        value: avnadmin
+      - key: SPRING_R2DBC_PASSWORD
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+
+  # 2. Vite React Frontend Static Site
+  - type: static
+    name: springaimcp-frontend
+    buildCommand: cd frontend && npm install && npm run build
+    staticPublishPath: ./frontend/dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_BASE_URL
+        fromService:
+          type: web
+          name: springaimcp-backend
+          property: hostpath
