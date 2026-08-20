@@ -1,10 +1,10 @@
 services:
-  # 1. Spring Boot Backend Web Service
+  # 1. Backend Web Service (Spring Boot 3 + Aiven PostgreSQL via Docker)
   - type: web
     name: springaimcp-backend
-    runtime: docker
-    dockerContext: ./backend
-    dockerfilePath: ./backend/Dockerfile
+    env: docker
+    dockerfilePath: backend/Dockerfile
+    dockerContext: backend
     plan: free
     envVars:
       - key: SPRING_DATASOURCE_URL
@@ -22,18 +22,17 @@ services:
       - key: GEMINI_API_KEY
         sync: false
 
-  # 2. Vite React Frontend Static Site
-  - type: static
+  # 2. Frontend Static Site (Vite React 18 -> https://springaimcp-frontend.onrender.com)
+  - type: web
     name: springaimcp-frontend
-    buildCommand: cd frontend && npm install && npm run build
-    staticPublishPath: ./frontend/dist
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm run build
+    staticPublishPath: ./dist
     routes:
       - type: rewrite
         source: /*
         destination: /index.html
     envVars:
       - key: VITE_API_BASE_URL
-        fromService:
-          type: web
-          name: springaimcp-backend
-          property: hostpath
+        value: https://springaimcp-backend.onrender.com
