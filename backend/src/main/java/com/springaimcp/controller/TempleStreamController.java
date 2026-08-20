@@ -14,6 +14,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/temples")
+@CrossOrigin(origins = "*")
 @Tag(name = "Streamable Temple AI APIs", description = "Server-Sent Events (SSE) streaming endpoints for dynamic queries and MCP responses")
 @SecurityRequirement(name = "basicAuth")
 public class TempleStreamController {

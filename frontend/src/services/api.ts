@@ -1,9 +1,10 @@
 import { Temple } from '../types/temple';
 
 const BASIC_AUTH_HEADER = 'Basic ' + btoa('admin:adminpassword');
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
 export const fetchAllTemples = async (): Promise<Temple[]> => {
-  const response = await fetch('/api/v1/temples', {
+  const response = await fetch(`${BASE_URL}/api/v1/temples`, {
     headers: {
       Authorization: BASIC_AUTH_HEADER,
       'Content-Type': 'application/json',
@@ -18,7 +19,7 @@ export const fetchAllTemples = async (): Promise<Temple[]> => {
 };
 
 export const searchTemples = async (query: string): Promise<Temple[]> => {
-  const response = await fetch(`/api/v1/temples/search?keyword=${encodeURIComponent(query)}`, {
+  const response = await fetch(`${BASE_URL}/api/v1/temples/search?keyword=${encodeURIComponent(query)}`, {
     headers: {
       Authorization: BASIC_AUTH_HEADER,
       'Content-Type': 'application/json',
@@ -33,7 +34,7 @@ export const searchTemples = async (query: string): Promise<Temple[]> => {
 };
 
 export const fetchTempleTranslation = async (id: number, targetLang: string = 'ta'): Promise<Temple> => {
-  const response = await fetch(`/api/v1/temples/${id}/translate?targetLang=${encodeURIComponent(targetLang)}`, {
+  const response = await fetch(`${BASE_URL}/api/v1/temples/${id}/translate?targetLang=${encodeURIComponent(targetLang)}`, {
     headers: {
       Authorization: BASIC_AUTH_HEADER,
       'Content-Type': 'application/json',
@@ -53,7 +54,7 @@ export const streamDynamicQuery = (
   onComplete: () => void,
   onError: (err: any) => void
 ) => {
-  const url = `/api/v1/temples/stream/query?prompt=${encodeURIComponent(prompt)}`;
+  const url = `${BASE_URL}/api/v1/temples/stream/query?prompt=${encodeURIComponent(prompt)}`;
   const eventSource = new EventSource(url);
 
   eventSource.onmessage = (event: MessageEvent) => {
