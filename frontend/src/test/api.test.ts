@@ -8,7 +8,7 @@ describe('API Services', () => {
 
   it('fetchAllTemples fetches temple records with basic auth headers', async () => {
     const mockTemples = [{ id: 494, name: 'Sri Idumban Temple' }];
-    global.fetch = vi.fn().mockResolvedValue({
+    (globalThis as any).fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => mockTemples,
     } as any);
@@ -18,7 +18,7 @@ describe('API Services', () => {
   });
 
   it('fetchAllTemples throws error on HTTP error response', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
+    (globalThis as any).fetch = vi.fn().mockResolvedValue({
       ok: false,
     } as any);
 

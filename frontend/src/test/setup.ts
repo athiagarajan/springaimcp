@@ -13,6 +13,6 @@ class MockEventSource {
   close() {}
 }
 
-(global as any).EventSource = MockEventSource;
+(globalThis as any).EventSource = MockEventSource;
 window.scrollTo = vi.fn();
 Element.prototype.scrollIntoView = vi.fn();
