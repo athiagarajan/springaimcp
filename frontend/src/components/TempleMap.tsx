@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import L from 'leaflet';
@@ -54,17 +54,33 @@ const MapRecenter: React.FC<{
   return null;
 };
 
-// Component for individual draggable temple marker
+// Component for individual draggable temple marker with smooth hover and off-hover auto-close
 const DraggableTempleMarker: React.FC<{
   temple: Temple;
   lat: number;
   lng: number;
   onSelectTemple?: (temple: Temple) => void;
   onAddTemple?: (temple: Temple) => void;
-  onHover?: (temple: Temple) => void;
-}> = ({ temple, lat, lng, onSelectTemple, onAddTemple, onHover }) => {
+}> = ({ temple, lat, lng, onSelectTemple, onAddTemple }) => {
   const map = useMap();
-  const markerRef = React.useRef<L.Marker | null>(null);
+  const markerRef = useRef<L.Marker | null>(null);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const cancelClose = () => {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+  };
+
+  const scheduleClose = (delay = 250) => {
+    cancelClose();
+    closeTimerRef.current = setTimeout(() => {
+      if (markerRef.current) {
+        markerRef.current.closePopup();
+      }
+    }, delay);
+  };
 
   useEffect(() => {
     const marker = markerRef.current;
@@ -91,6 +107,7 @@ const DraggableTempleMarker: React.FC<{
     };
 
     const handleDragStart = (e: DragEvent) => {
+      cancelClose();
       setGlobalDraggedTemple(temple);
       if (e.dataTransfer) {
         e.dataTransfer.setData('application/json', JSON.stringify(temple));
@@ -122,6 +139,7 @@ const DraggableTempleMarker: React.FC<{
 
     const handleDragEnd = () => {
       map.dragging.enable();
+      scheduleClose(100);
       setTimeout(() => setGlobalDraggedTemple(null), 300);
     };
 
@@ -136,6 +154,7 @@ const DraggableTempleMarker: React.FC<{
       el.removeEventListener('dragstart', handleDragStart);
       el.removeEventListener('dragend', handleDragEnd);
       map.dragging.enable();
+      cancelClose();
     };
   }, [temple, map]);
 
@@ -146,15 +165,32 @@ const DraggableTempleMarker: React.FC<{
       icon={customIcon}
       eventHandlers={{
         mouseover: (e) => {
+          cancelClose();
           e.target.openPopup();
-          if (onHover) onHover(temple);
         },
-        click: () => onSelectTemple && onSelectTemple(temple)
+        mouseout: () => {
+          // When mouse leaves the pin, give user a 300ms window to move into the popup
+          scheduleClose(300);
+        },
+        click: () => {
+          cancelClose();
+          onSelectTemple && onSelectTemple(temple);
+        }
       }}
     >
-      {/* Details Popup shown on Hover & Click */}
+      {/* Details Popup shown on Hover with Auto-Close on off-hover */}
       <Popup className="custom-popup" autoPan={false}>
-        <div className="p-2 font-sans min-w-[210px] max-w-[280px]">
+        <div
+          className="p-2.5 font-sans min-w-[210px] max-w-[280px]"
+          onMouseEnter={() => {
+            // User entered popup, keep it open!
+            cancelClose();
+          }}
+          onMouseLeave={() => {
+            // Off hover popup: close immediately!
+            scheduleClose(150);
+          }}
+        >
           <h3 className="font-bold text-slate-100 text-sm">{temple.name}</h3>
           <p className="text-xs text-slate-400 font-semibold">{temple.city || 'N/A'}, {temple.district || temple.state}</p>
           {temple.moolavar && (
@@ -169,6 +205,8 @@ const DraggableTempleMarker: React.FC<{
               onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => {
                 e.stopPropagation();
+                cancelClose();
+                if (markerRef.current) markerRef.current.closePopup();
                 onSelectTemple && onSelectTemple(temple);
               }}
               className="text-[11px] bg-indigo-600 hover:bg-indigo-500 text-white px-2.5 py-1 rounded-lg font-semibold transition cursor-pointer flex items-center gap-1"
@@ -184,6 +222,7 @@ const DraggableTempleMarker: React.FC<{
                 onClick={(e) => {
                   e.stopPropagation();
                   onAddTemple(temple);
+                  scheduleClose(400);
                 }}
                 className="text-[11px] bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-1 rounded-lg font-semibold transition cursor-pointer flex items-center gap-1 shadow-sm"
                 title="Add to Temple Records table"
@@ -197,9 +236,13 @@ const DraggableTempleMarker: React.FC<{
           <div
             draggable={true}
             onDragStart={(e) => {
+              cancelClose();
               setGlobalDraggedTemple(temple);
               e.dataTransfer.setData('text/plain', JSON.stringify(temple));
               e.dataTransfer.effectAllowed = 'copy';
+            }}
+            onDragEnd={() => {
+              scheduleClose(100);
             }}
             className="mt-2 text-center text-[10px] font-semibold text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-700 py-1 px-2 rounded-lg border border-slate-700 cursor-grab active:cursor-grabbing flex items-center justify-center gap-1 transition"
             title="Press and drag down to Temple Records table"
@@ -215,7 +258,6 @@ const DraggableTempleMarker: React.FC<{
 
 export const TempleMap: React.FC<TempleMapProps> = ({ temples, selectedTemple, onSelectTemple, onAddTemple }) => {
   const [enableClustering, setEnableClustering] = useState<boolean>(true);
-  const [previewTemple, setPreviewTemple] = useState<Temple | null>(null);
 
   // 1. Initial coordinates assignment for each temple
   const rawMapItems = temples.map((temple, idx) => {
@@ -269,7 +311,6 @@ export const TempleMap: React.FC<TempleMapProps> = ({ temples, selectedTemple, o
         lng={lng}
         onSelectTemple={onSelectTemple}
         onAddTemple={onAddTemple}
-        onHover={(t) => setPreviewTemple(t)}
       />
     ));
 
@@ -304,85 +345,28 @@ export const TempleMap: React.FC<TempleMapProps> = ({ temples, selectedTemple, o
         </div>
       </div>
 
-      <div className="flex-1 rounded-xl overflow-hidden border border-slate-800 z-10 min-h-[300px] relative">
+      <div className="flex-1 rounded-xl overflow-hidden border border-slate-800 z-10 min-h-[300px]">
         {mapItems.length > 0 ? (
-          <>
-            <MapContainer center={defaultCenter} zoom={7} scrollWheelZoom={true} className="w-full h-full min-h-[320px]">
-              <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              />
-              <MapRecenter selectedTemple={selectedTemple} mapItems={mapItems} />
+          <MapContainer center={defaultCenter} zoom={7} scrollWheelZoom={true} className="w-full h-full min-h-[320px]">
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+            <MapRecenter selectedTemple={selectedTemple} mapItems={mapItems} />
 
-              {enableClustering ? (
-                <MarkerClusterGroup
-                  chunkedLoading
-                  maxClusterRadius={50}
-                  spiderfyOnMaxZoom={true}
-                  showCoverageOnHover={false}
-                >
-                  {renderMarkers()}
-                </MarkerClusterGroup>
-              ) : (
-                renderMarkers()
-              )}
-            </MapContainer>
-
-            {/* Quick Preview Card at Bottom of Map when any pin is hovered */}
-            {previewTemple && (
-              <div className="absolute bottom-3 left-3 right-3 z-[1100] glass-panel bg-slate-950/90 border border-indigo-500/40 rounded-xl p-3 shadow-2xl flex items-center justify-between gap-3 animate-in fade-in slide-in-from-bottom-2 duration-200">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-white truncate">{previewTemple.name}</span>
-                    <span className="text-[10px] font-mono text-indigo-400 bg-indigo-950 px-1.5 py-0.5 rounded border border-indigo-800/60 shrink-0">
-                      #{previewTemple.id}
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-400 truncate">
-                    {previewTemple.city || 'N/A'}, {previewTemple.district || previewTemple.state}
-                    {previewTemple.moolavar && <span className="text-emerald-400 ml-2">• Deity: {previewTemple.moolavar}</span>}
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-2 shrink-0">
-                  {onAddTemple && (
-                    <button
-                      type="button"
-                      onClick={() => onAddTemple(previewTemple)}
-                      className="text-xs bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg font-semibold transition cursor-pointer flex items-center gap-1 shadow-sm"
-                      title="Add to Temple Records table"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>Add to Table</span>
-                    </button>
-                  )}
-
-                  <div
-                    draggable={true}
-                    onDragStart={(e) => {
-                      setGlobalDraggedTemple(previewTemple);
-                      e.dataTransfer.setData('text/plain', JSON.stringify(previewTemple));
-                      e.dataTransfer.effectAllowed = 'copy';
-                    }}
-                    className="text-xs font-semibold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg border border-slate-700 cursor-grab active:cursor-grabbing flex items-center gap-1 transition"
-                    title="Drag down to Temple Records table"
-                  >
-                    <GripVertical className="w-3.5 h-3.5" />
-                    <span>Drag to Table</span>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => onSelectTemple && onSelectTemple(previewTemple)}
-                    className="text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg font-semibold transition cursor-pointer flex items-center gap-1"
-                  >
-                    <Eye className="w-3.5 h-3.5" />
-                    <span>Details</span>
-                  </button>
-                </div>
-              </div>
+            {enableClustering ? (
+              <MarkerClusterGroup
+                chunkedLoading
+                maxClusterRadius={50}
+                spiderfyOnMaxZoom={true}
+                showCoverageOnHover={false}
+              >
+                {renderMarkers()}
+              </MarkerClusterGroup>
+            ) : (
+              renderMarkers()
             )}
-          </>
+          </MapContainer>
         ) : (
           <div className="h-full flex flex-col items-center justify-center text-slate-500 text-xs font-mono p-6 text-center">
             <Navigation className="w-8 h-8 mb-2 text-slate-600 animate-bounce" />
