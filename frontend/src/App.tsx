@@ -111,6 +111,7 @@ export const App: React.FC = () => {
 
         <TempleTable
           temples={tableTemples}
+          allTemples={allTemples}
           onSelectTemple={(t) => setSelectedTemple(t)}
           isLoading={isLoadingTemples}
           onAddTemple={handleAddTempleToRecords}

@@ -4,12 +4,13 @@ import { Search, MapPin, Eye, Calendar, Sparkles, ChevronDown, ChevronUp, Downlo
 
 interface TempleTableProps {
   temples: Temple[];
+  allTemples?: Temple[];
   onSelectTemple: (temple: Temple) => void;
   isLoading: boolean;
   onAddTemple?: (temple: Temple) => void;
 }
 
-export const TempleTable: React.FC<TempleTableProps> = ({ temples, onSelectTemple, isLoading, onAddTemple }) => {
+export const TempleTable: React.FC<TempleTableProps> = ({ temples, allTemples, onSelectTemple, isLoading, onAddTemple }) => {
   const [filterText, setFilterText] = useState('');
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -23,11 +24,20 @@ export const TempleTable: React.FC<TempleTableProps> = ({ temples, onSelectTempl
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     e.dataTransfer.dropEffect = 'copy';
     if (!isDragOver) setIsDragOver(true);
   };
 
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(true);
+  };
+
   const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     if (!e.currentTarget.contains(e.relatedTarget as Node)) {
       setIsDragOver(false);
     }
@@ -35,15 +45,25 @@ export const TempleTable: React.FC<TempleTableProps> = ({ temples, onSelectTempl
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     setIsDragOver(false);
 
     try {
+      let droppedTemple: Temple | null = null;
       const dataStr = e.dataTransfer.getData('application/json');
       if (dataStr) {
-        const droppedTemple: Temple = JSON.parse(dataStr);
-        if (onAddTemple) {
-          onAddTemple(droppedTemple);
+        droppedTemple = JSON.parse(dataStr);
+      }
+      if (!droppedTemple) {
+        const textId = e.dataTransfer.getData('text/plain');
+        if (textId) {
+          const pool = allTemples && allTemples.length > 0 ? allTemples : temples;
+          droppedTemple = pool.find((t) => String(t.id) === textId) || null;
         }
+      }
+
+      if (droppedTemple && onAddTemple) {
+        onAddTemple(droppedTemple);
       }
     } catch (err) {
       console.error('Failed to parse dropped temple data:', err);
@@ -53,6 +73,7 @@ export const TempleTable: React.FC<TempleTableProps> = ({ temples, onSelectTempl
   return (
     <div 
       onDragOver={handleDragOver}
+      onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
       className={`glass-panel rounded-2xl p-5 flex flex-col space-y-4 transition-all duration-300 relative ${
