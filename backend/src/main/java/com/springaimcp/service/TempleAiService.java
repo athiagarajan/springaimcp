@@ -181,10 +181,12 @@ public class TempleAiService {
             }
 
             Temple translated = translateWithGemini(original, lang, geminiApiKey);
-            if (translated != null) {
+            boolean isValidTranslation = translated != null 
+                && !translated.name().equalsIgnoreCase(original.name());
+            if (isValidTranslation) {
                 translationCache.put(cacheKey, translated);
             }
-            return translated != null ? translated : original;
+            return (translated != null) ? translated : original;
         })
         .subscribeOn(Schedulers.boundedElastic());
     }
@@ -192,29 +194,40 @@ public class TempleAiService {
     private Temple translateWithGemini(Temple original, String targetLang, String apiKey) {
         try {
             String langName;
-            String scriptInstruction;
+            String scriptName;
+            String scriptExample;
             switch (targetLang.toLowerCase()) {
                 case "te" -> {
                     langName = "Telugu";
-                    scriptInstruction = "fluent native Telugu script (తెలుగు లిపి)";
+                    scriptName = "Telugu script (తెలుగు లిపి)";
+                    scriptExample = "Transliterate all names and codes into Telugu characters (e.g. 'పి.ఎల్.ఎన్.ఐ' for PLNI, 'మధురై' for Madurai, 'ఇడుంబన్' for Idumban). Never include Tamil or Latin letters.";
                 }
                 case "hi" -> {
                     langName = "Hindi";
-                    scriptInstruction = "fluent native Hindi / Devanagari script (हिन्दी / देवनागरी लिपि)";
+                    scriptName = "Devanagari script (हिन्दी / देवनागरी लिपि)";
+                    scriptExample = "Transliterate all names and codes into Devanagari characters (e.g. 'पी.एल.एन.आई' for PLNI, 'मदुरै' for Madurai). Never leave Latin letters.";
                 }
                 case "ta" -> {
                     langName = "Tamil";
-                    scriptInstruction = "fluent native Tamil script (தமிழ் எழுத்துக்கள்)";
+                    scriptName = "Tamil script (தமிழ் எழுத்துக்கள்)";
+                    scriptExample = "Transliterate all names and codes into Tamil characters (e.g. 'பி.எல்.என்.ஐ' for PLNI, 'மதுரை' for Madurai). Never leave Latin letters.";
                 }
                 default -> {
                     langName = "Tamil";
-                    scriptInstruction = "fluent native Tamil script (தமிழ் எழுத்துக்கள்)";
+                    scriptName = "Tamil script (தமிழ் எழுத்துக்கள்)";
+                    scriptExample = "Transliterate all names and codes into Tamil characters.";
                 }
             }
 
             String prompt = String.format("""
-                You are an expert English to %s translator specializing in Indian temples and culture.
-                Translate ALL descriptive text fields into %s.
+                You are an expert English to %s translator specializing in Indian temples, Hindu traditions, and cultural heritage.
+                Translate ALL the following temple details into fluent, authentic %s.
+
+                STRICT TRANSLATION MANDATES:
+                1. 100%% %s ONLY: Every single field must be translated or transliterated entirely into %s.
+                2. ZERO ENGLISH RESIDUE: Do NOT leave ANY English words, phrases, timings, codes, or Latin characters in ANY value. %s
+                3. SCRIPT PURITY: Every character must be strictly in %s. Do NOT mix characters from any other language or script.
+                4. FULL COMPLETENESS: Every single requested key must be present with complete translated text in the returned JSON.
 
                 Temple details to translate:
                 Name: %s
@@ -232,8 +245,8 @@ public class TempleAiService {
                 Agamam / Pooja: %s
                 Speciality: %s
                 History: %s
+                General Information: %s
                 Address: %s
-                Location: %s
                 Opening Time: %s
                 Festival: %s
                 Nearest Railway Station: %s
@@ -248,12 +261,15 @@ public class TempleAiService {
                 Return ONLY a valid JSON object with the exact keys:
                 "name", "historicalName", "city", "district", "state", "moolavar", "urchavar", "ammanThayar",
                 "thalaVirutcham", "theertham", "singers", "oldYear", "agamamPooja", "speciality", "history",
-                "address", "location", "openingTime", "festival", "nearByRailwayStation", "nearByAirport",
+                "generalInformation", "address", "openingTime", "festival", "nearByRailwayStation", "nearByAirport",
                 "accommodation", "prayers", "thanksGiving", "greatness", "features"
-                All values MUST be in %s.
                 """,
                 langName,
-                scriptInstruction,
+                scriptName,
+                langName,
+                scriptName,
+                scriptExample,
+                scriptName,
                 escapeJson(original.name(), 0),
                 escapeJson(original.historicalName(), 0),
                 escapeJson(original.city(), 0),
@@ -269,8 +285,8 @@ public class TempleAiService {
                 escapeJson(original.agamamPooja(), 0),
                 escapeJson(original.speciality(), 0),
                 escapeJson(original.history(), 0),
+                escapeJson(original.generalInformation(), 0),
                 escapeJson(original.address(), 0),
-                escapeJson(original.location(), 0),
                 escapeJson(original.openingTime(), 0),
                 escapeJson(original.festival(), 0),
                 escapeJson(original.nearByRailwayStation(), 0),
@@ -279,8 +295,7 @@ public class TempleAiService {
                 escapeJson(original.prayers(), 0),
                 escapeJson(original.thanksGiving(), 0),
                 escapeJson(original.greatness(), 0),
-                escapeJson(original.features(), 0),
-                scriptInstruction
+                escapeJson(original.features(), 0)
             );
 
             String jsonText = callGeminiApi(prompt, true);
@@ -295,8 +310,8 @@ public class TempleAiService {
         Map<String, Object> part = Map.of("text", promptText);
         Map<String, Object> contentMap = Map.of("parts", List.of(part));
         Map<String, Object> genConfig = jsonMode
-                ? Map.of("temperature", 0.1, "responseMimeType", "application/json")
-                : Map.of("temperature", 0.1);
+                ? Map.of("temperature", 0.1, "maxOutputTokens", 8192, "responseMimeType", "application/json")
+                : Map.of("temperature", 0.1, "maxOutputTokens", 4096);
 
         Map<String, Object> reqBody = Map.of("contents", List.of(contentMap), "generationConfig", genConfig);
 
@@ -378,7 +393,7 @@ public class TempleAiService {
                 getTextOrDefault(root, "state", original.state()),
                 getTextOrDefault(root, "singers", original.singers()),
                 getTextOrDefault(root, "festival", original.festival()),
-                original.generalInformation(),
+                getTextOrDefault(root, "generalInformation", original.generalInformation()),
                 getTextOrDefault(root, "address", original.address()),
                 original.phone(),
                 getTextOrDefault(root, "openingTime", original.openingTime()),
