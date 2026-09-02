@@ -10,7 +10,7 @@ export const Header: React.FC = () => {
         </div>
         <div>
           <h1 className="text-xl font-bold bg-gradient-to-r from-white via-slate-200 to-indigo-300 bg-clip-text text-transparent">
-            springaimcp Explorer
+            Indian Temples Explorer
           </h1>
           <p className="text-xs text-slate-400 font-mono flex items-center gap-2">
             <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>

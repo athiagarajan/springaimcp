@@ -43,7 +43,7 @@ describe('App Component', () => {
       render(<App />);
     });
 
-    expect(screen.getByText('springaimcp Explorer')).toBeInTheDocument();
+    expect(screen.getByText('Indian Temples Explorer')).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/Ask anything about the temples database/i)).toBeInTheDocument();
 
     const input = screen.getByPlaceholderText(/Ask anything about the temples database/i);
