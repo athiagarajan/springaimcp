@@ -35,10 +35,21 @@ export const searchTemples = async (query: string): Promise<Temple[]> => {
 
 const translationCache = new Map<string, Temple>();
 
+const hasEnglishResidue = (temple: Temple): boolean => {
+  if (temple.location && /[a-zA-Z]{4,}/.test(temple.location)) return true;
+  if (temple.greatness && /\bLord\b/.test(temple.greatness)) return true;
+  if (temple.generalInformation && /\bLord\b/.test(temple.generalInformation)) return true;
+  return false;
+};
+
 export const fetchTempleTranslation = async (id: number, targetLang: string = 'ta'): Promise<Temple> => {
   const cacheKey = `${id}_${targetLang.toLowerCase()}`;
   if (translationCache.has(cacheKey)) {
-    return translationCache.get(cacheKey)!;
+    const cached = translationCache.get(cacheKey)!;
+    if (!hasEnglishResidue(cached)) {
+      return cached;
+    }
+    translationCache.delete(cacheKey);
   }
 
   const response = await fetch(`${BASE_URL}/api/v1/temples/${id}/translate?targetLang=${encodeURIComponent(targetLang)}`, {
@@ -53,7 +64,9 @@ export const fetchTempleTranslation = async (id: number, targetLang: string = 't
   }
 
   const result: Temple = await response.json();
-  translationCache.set(cacheKey, result);
+  if (!hasEnglishResidue(result)) {
+    translationCache.set(cacheKey, result);
+  }
   return result;
 };
 

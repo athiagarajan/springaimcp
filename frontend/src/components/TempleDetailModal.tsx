@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Temple } from '../types/temple';
 import { fetchTempleTranslation } from '../services/api';
-import { X, MapPin, Calendar, Phone, Clock, Train, Plane, Info, ShieldAlert, Crosshair, Languages, Loader2, ChevronDown, Check } from 'lucide-react';
+import { X, MapPin, Calendar, Phone, Clock, Train, Plane, Info, ShieldAlert, Crosshair, Languages, Loader2, ChevronDown, Check, Sparkles, HeartHandshake, BookOpen } from 'lucide-react';
 
 export type SupportedLanguage = 'en' | 'ta' | 'te' | 'hi';
 
@@ -36,6 +36,12 @@ const UI_TEXT: Record<SupportedLanguage, {
   locatePinFooter: string;
   closeDetails: string;
   translatingMsg: string;
+  greatness: string;
+  prayers: string;
+  thanksGiving: string;
+  features: string;
+  generalInformation: string;
+  directions: string;
 }> = {
   en: {
     temple: 'Temple',
@@ -56,12 +62,18 @@ const UI_TEXT: Record<SupportedLanguage, {
     phone: 'Phone:',
     openingTime: 'Opening Timings:',
     address: 'Address:',
+    directions: 'Location & How to Reach:',
     railway: 'Nearest Railway:',
     airport: 'Nearest Airport:',
     accommodation: 'Accommodation:',
     locatePinFooter: 'Locate Pin on Map',
     closeDetails: 'Close Details',
     translatingMsg: 'Translating all temple details via Gemini AI...',
+    greatness: 'Temple Greatness & Glory',
+    prayers: 'Prayers & Blessings',
+    thanksGiving: 'Thanksgiving & Offerings',
+    features: 'Architectural & Spiritual Features',
+    generalInformation: 'General Information',
   },
   ta: {
     temple: 'திருக்கோயில்',
@@ -82,12 +94,18 @@ const UI_TEXT: Record<SupportedLanguage, {
     phone: 'தொலைபேசி:',
     openingTime: 'நடை திறக்கும் நேரம்:',
     address: 'முகவரி:',
+    directions: 'அமைவிடம் & செல்லும் வழி:',
     railway: 'அருகிலுள்ள ரயில் நிலையம்:',
     airport: 'அருகிலுள்ள விமான நிலையம்:',
     accommodation: 'தங்குமிடம்:',
     locatePinFooter: 'வரைபடத்தில் இருப்பிடத்தைக் காட்டு',
     closeDetails: 'விவரங்களை மூடுக',
     translatingMsg: 'ஜெமினி AI மூலம் கோயிலின் அனைத்து விவரங்களும் தமிழில் மொழிபெயர்க்கப்படுகிறது...',
+    greatness: 'கோயில் பெருமை & மகிமை',
+    prayers: 'பிரார்த்தனைகள்',
+    thanksGiving: 'நேர்த்திக்கடன்',
+    features: 'சிறப்பம்சங்கள்',
+    generalInformation: 'பொதுத் தகவல்',
   },
   te: {
     temple: 'ఆలయం',
@@ -108,12 +126,18 @@ const UI_TEXT: Record<SupportedLanguage, {
     phone: 'ఫోన్ నంబరు:',
     openingTime: 'దర్శన వేళలు:',
     address: 'చిరునామా:',
+    directions: 'ఆలయ స్థానం & చేరుకునే మార్గం:',
     railway: 'సమీప రైల్వే స్టేషన్:',
     airport: 'సమీప విమానాశ్రయం:',
     accommodation: 'వసతి సౌకర్యాలు:',
     locatePinFooter: 'మ్యాప్‌లో ఆలయాన్ని గుర్తించండి',
     closeDetails: 'వివరాలు మూసివేయి',
     translatingMsg: 'జెమిని AI ద్వారా ఆలయ వివరాలన్నీ తెలుగులోకి అనువదించబడుతున్నాయి...',
+    greatness: 'ఆలయ మహిమ & ప్రాశస్త్యం',
+    prayers: 'ప్రార్థనలు & మొక్కుబడులు',
+    thanksGiving: 'కృతజ్ఞతలు & సమర్పణలు',
+    features: 'ఆలయ విశేషాలు',
+    generalInformation: 'సాధారణ సమాచారం',
   },
   hi: {
     temple: 'मंदिर',
@@ -134,12 +158,18 @@ const UI_TEXT: Record<SupportedLanguage, {
     phone: 'दूरभाष (फोन):',
     openingTime: 'दर्शन का समय:',
     address: 'पता:',
+    directions: 'स्थान एवं पहुँचने का मार्ग:',
     railway: 'निकटतम रेलवे स्टेशन:',
     airport: 'निकटतम हवाई अड्डा:',
     accommodation: 'ठहरने की व्यवस्था:',
     locatePinFooter: 'मानचित्र पर मंदिर देखें',
     closeDetails: 'विवरण बंद करें',
     translatingMsg: 'जेमिनी AI द्वारा मंदिर का संपूर्ण विवरण हिन्दी में अनुवादित किया जा रहा है...',
+    greatness: 'मंदिर की महिमा एवं महात्म्य',
+    prayers: 'प्रार्थना एवं मनोकामना',
+    thanksGiving: 'कृतज्ञता एवं चढ़ावा',
+    features: 'मंदिर की विशेषताएं',
+    generalInformation: 'सामान्य जानकारी',
   },
 };
 
@@ -202,8 +232,14 @@ export const TempleDetailModal: React.FC<TempleDetailModalProps> = ({ temple, on
       return;
     }
 
-    // Check if already cached in component state
-    if (translationCache[targetLang]) {
+    // Check if already cached in component state without English residue
+    const cachedItem = translationCache[targetLang];
+    const hasResidue = cachedItem && (
+      Boolean(cachedItem.location && /[a-zA-Z]{4,}/.test(cachedItem.location)) ||
+      Boolean(cachedItem.greatness && /\bLord\b/.test(cachedItem.greatness)) ||
+      Boolean(cachedItem.generalInformation && /\bLord\b/.test(cachedItem.generalInformation))
+    );
+    if (cachedItem && !hasResidue) {
       setDisplayedLang(targetLang);
       setTranslationError(null);
       return;
@@ -418,6 +454,16 @@ export const TempleDetailModal: React.FC<TempleDetailModalProps> = ({ temple, on
               </div>
             </div>
 
+            {displayTemple.generalInformation && (
+              <div className="bg-slate-900/40 p-4 rounded-xl border border-slate-800">
+                <h3 className="text-xs font-bold font-mono text-cyan-400 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                  <BookOpen className="w-4 h-4" />
+                  {t.generalInformation}
+                </h3>
+                <p className="text-xs leading-relaxed text-slate-300">{displayTemple.generalInformation}</p>
+              </div>
+            )}
+
             {displayTemple.speciality && (
               <div className="bg-slate-900/40 p-4 rounded-xl border border-slate-800">
                 <h3 className="text-xs font-bold font-mono text-emerald-400 uppercase tracking-wider mb-1 flex items-center gap-1.5">
@@ -434,7 +480,50 @@ export const TempleDetailModal: React.FC<TempleDetailModalProps> = ({ temple, on
                   <Calendar className="w-4 h-4" />
                   {t.history}
                 </h3>
-                <p className="text-xs leading-relaxed text-slate-300">{displayTemple.history}</p>
+                <p className="text-xs leading-relaxed text-slate-300 whitespace-pre-line">{displayTemple.history}</p>
+              </div>
+            )}
+
+            {displayTemple.greatness && (
+              <div className="bg-slate-900/40 p-4 rounded-xl border border-slate-800">
+                <h3 className="text-xs font-bold font-mono text-amber-300 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4 text-amber-400" />
+                  {t.greatness}
+                </h3>
+                <p className="text-xs leading-relaxed text-slate-300 whitespace-pre-line">{displayTemple.greatness}</p>
+              </div>
+            )}
+
+            {(displayTemple.prayers || displayTemple.thanksGiving) && (
+              <div className="bg-slate-900/40 p-4 rounded-xl border border-slate-800 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                {displayTemple.prayers && (
+                  <div>
+                    <h3 className="text-xs font-bold font-mono text-teal-400 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                      <HeartHandshake className="w-4 h-4" />
+                      {t.prayers}
+                    </h3>
+                    <p className="leading-relaxed text-slate-300">{displayTemple.prayers}</p>
+                  </div>
+                )}
+                {displayTemple.thanksGiving && (
+                  <div>
+                    <h3 className="text-xs font-bold font-mono text-teal-300 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                      <Sparkles className="w-4 h-4" />
+                      {t.thanksGiving}
+                    </h3>
+                    <p className="leading-relaxed text-slate-300">{displayTemple.thanksGiving}</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {displayTemple.features && (
+              <div className="bg-slate-900/40 p-4 rounded-xl border border-slate-800">
+                <h3 className="text-xs font-bold font-mono text-purple-300 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                  <Info className="w-4 h-4" />
+                  {t.features}
+                </h3>
+                <p className="text-xs leading-relaxed text-slate-300">{displayTemple.features}</p>
               </div>
             )}
 
@@ -450,8 +539,13 @@ export const TempleDetailModal: React.FC<TempleDetailModalProps> = ({ temple, on
                 </p>
                 <p className="flex items-center gap-2 text-slate-300">
                   <MapPin className="w-3.5 h-3.5 text-indigo-400" />
-                  <span><strong>{t.address}</strong> {displayTemple.address || displayTemple.location || 'N/A'}</span>
+                  <span><strong>{t.address}</strong> {displayTemple.address || 'N/A'}</span>
                 </p>
+                {displayTemple.location && displayTemple.location !== displayTemple.address && (
+                  <p className="text-[11px] text-slate-400 ml-5 mt-1 leading-relaxed">
+                    <strong>{t.directions}</strong> {displayTemple.location}
+                  </p>
+                )}
               </div>
               <div>
                 <p className="flex items-center gap-2 text-slate-300 mb-1">

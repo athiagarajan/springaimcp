@@ -177,12 +177,16 @@ public class TempleAiService {
 
             String cacheKey = id + "_" + lang;
             if (translationCache.containsKey(cacheKey)) {
-                return translationCache.get(cacheKey);
+                Temple cached = translationCache.get(cacheKey);
+                if (!hasEnglishResidue(cached)) {
+                    return cached;
+                }
             }
 
             Temple translated = translateWithGemini(original, lang, geminiApiKey);
             boolean isValidTranslation = translated != null 
-                && !translated.name().equalsIgnoreCase(original.name());
+                && !translated.name().equalsIgnoreCase(original.name())
+                && !hasEnglishResidue(translated);
             if (isValidTranslation) {
                 translationCache.put(cacheKey, translated);
             }
@@ -191,43 +195,66 @@ public class TempleAiService {
         .subscribeOn(Schedulers.boundedElastic());
     }
 
+    private boolean hasEnglishResidue(Temple temple) {
+        if (temple == null) return true;
+        if (temple.location() != null && temple.location().matches(".*[a-zA-Z]{4,}.*")) return true;
+        if (temple.greatness() != null && temple.greatness().matches(".*\\bLord\\b.*")) return true;
+        if (temple.generalInformation() != null && temple.generalInformation().matches(".*\\bLord\\b.*")) return true;
+        return false;
+    }
+
     private Temple translateWithGemini(Temple original, String targetLang, String apiKey) {
         try {
             String langName;
             String scriptName;
-            String scriptExample;
+            String deityInst;
+            String extraInst;
             switch (targetLang.toLowerCase()) {
                 case "te" -> {
                     langName = "Telugu";
                     scriptName = "Telugu script (తెలుగు లిపి)";
-                    scriptExample = "Transliterate all names and codes into Telugu characters (e.g. 'పి.ఎల్.ఎన్.ఐ' for PLNI, 'మధురై' for Madurai, 'ఇడుంబన్' for Idumban). Never include Tamil or Latin letters.";
+                    deityInst = "Translate deity titles like 'Lord', 'Sage', 'God' into Telugu: 'Lord Anjaneya' -> 'ఆంజనేయ స్వామి', 'Lord Subrahmanya' -> 'సుబ్రహ్మణ్య స్వామి', 'Lord Dakshinamoorthi' -> 'దక్షిణామూర్తి స్వామి', 'Lord Siva' -> 'శివుడు', 'Lord Murugan' -> 'మురుగన్ స్వామి'. NEVER output 'Lord Anjaneya' or leave English words.";
+                    extraInst = "Translate 'bus-service' to 'బస్సు సౌకర్యం', 'autorickshaw' to 'ఆటో రిక్షా', 'respective' to 'సంబంధిత', 'agama' to 'ఆగమం'. Transliterate all Tamil script into pure Telugu script.";
                 }
                 case "hi" -> {
                     langName = "Hindi";
                     scriptName = "Devanagari script (हिन्दी / देवनागरी लिपि)";
-                    scriptExample = "Transliterate all names and codes into Devanagari characters (e.g. 'पी.एल.एन.आई' for PLNI, 'मदुरै' for Madurai). Never leave Latin letters.";
+                    deityInst = "Translate deity titles like 'Lord', 'Sage', 'God' into Hindi: 'Lord Anjaneya' -> 'भगवान आंजनेय', 'Lord Subrahmanya' -> 'भगवान सुब्रह्मण्य', 'Lord Dakshinamoorthi' -> 'भगवान दक्षिणामूर्ति', 'Lord Siva' -> 'भगवान शिव', 'Lord Murugan' -> 'भगवान मुरुगन'. NEVER output 'Lord Anjaneya' or leave English words.";
+                    extraInst = "Translate 'bus-service' to 'बस सेवा', 'autorickshaw' to 'ऑटो रिक्शा', 'respective' to 'क्रमशः / संबंधित', 'agama' to 'आगम'.";
                 }
                 case "ta" -> {
                     langName = "Tamil";
                     scriptName = "Tamil script (தமிழ் எழுத்துக்கள்)";
-                    scriptExample = "Transliterate all names and codes into Tamil characters (e.g. 'பி.எல்.என்.ஐ' for PLNI, 'மதுரை' for Madurai). Never leave Latin letters.";
+                    deityInst = "Translate deity titles like 'Lord', 'Sage', 'God' into Tamil: 'Lord Anjaneya' -> 'அருள்மிகு ஆஞ்சநேயர்', 'Lord Subrahmanya' -> 'சுப்பிரமணிய சுவாமி', 'Lord Dakshinamoorthi' -> 'தட்சிணாமூர்த்தி சுவாமி', 'Lord Siva' -> 'சிவபெருமான்', 'Lord Murugan' -> 'முருகப்பெருமான்'. NEVER output 'Lord Anjaneya-விற்கு' or leave English words.";
+                    extraInst = "Translate 'bus-service' to 'பேருந்து வசதி', 'autorickshaw' to 'ஆட்டோ ரிக்‌ஷா', 'respective' to 'தனித்தனி', 'agama' to 'ஆகமம்'.";
                 }
                 default -> {
                     langName = "Tamil";
                     scriptName = "Tamil script (தமிழ் எழுத்துக்கள்)";
-                    scriptExample = "Transliterate all names and codes into Tamil characters.";
+                    deityInst = "Translate all deity titles into Tamil script.";
+                    extraInst = "Translate all technical and transport terms into Tamil.";
                 }
             }
 
             String prompt = String.format("""
                 You are an expert English to %s translator specializing in Indian temples, Hindu traditions, and cultural heritage.
-                Translate ALL the following temple details into fluent, authentic %s.
+                Translate ALL details of this temple into fluent, authentic %s.
 
-                STRICT TRANSLATION MANDATES:
-                1. 100%% %s ONLY: Every single field must be translated or transliterated entirely into %s.
-                2. ZERO ENGLISH RESIDUE: Do NOT leave ANY English words, phrases, timings, codes, or Latin characters in ANY value. %s
-                3. SCRIPT PURITY: Every character must be strictly in %s. Do NOT mix characters from any other language or script.
-                4. FULL COMPLETENESS: Every single requested key must be present with complete translated text in the returned JSON.
+                STRICT MANDATORY RULES:
+                1. TRANSLATE EVERY SINGLE SENTENCE AND CLAUSE:
+                   Do NOT leave any sentence, phrase, or clause in English.
+                2. TRANSLATION OF DEITIES AND HONORIFIC TITLES:
+                   %s
+                3. ZERO ENGLISH RESIDUE:
+                   Absolutely ZERO Latin/English characters or words are allowed in ANY value of the returned JSON.
+                   %s
+                4. SCRIPT PURITY:
+                   Every single character in all values must be in %s.
+                5. FULL FIELD COVERAGE:
+                   You MUST translate every field: "name", "historicalName", "city", "district", "state", "moolavar", "urchavar", "ammanThayar",
+                   "thalaVirutcham", "theertham", "singers", "oldYear", "agamamPooja", "speciality", "history", "generalInformation", "address",
+                   "location", "openingTime", "festival", "nearByRailwayStation", "nearByAirport", "accommodation", "prayers", "thanksGiving",
+                   "greatness", "features".
 
                 Temple details to translate:
                 Name: %s
@@ -247,6 +274,7 @@ public class TempleAiService {
                 History: %s
                 General Information: %s
                 Address: %s
+                Location: %s
                 Opening Time: %s
                 Festival: %s
                 Nearest Railway Station: %s
@@ -261,14 +289,13 @@ public class TempleAiService {
                 Return ONLY a valid JSON object with the exact keys:
                 "name", "historicalName", "city", "district", "state", "moolavar", "urchavar", "ammanThayar",
                 "thalaVirutcham", "theertham", "singers", "oldYear", "agamamPooja", "speciality", "history",
-                "generalInformation", "address", "openingTime", "festival", "nearByRailwayStation", "nearByAirport",
+                "generalInformation", "address", "location", "openingTime", "festival", "nearByRailwayStation", "nearByAirport",
                 "accommodation", "prayers", "thanksGiving", "greatness", "features"
                 """,
                 langName,
                 scriptName,
-                langName,
-                scriptName,
-                scriptExample,
+                deityInst,
+                extraInst,
                 scriptName,
                 escapeJson(original.name(), 0),
                 escapeJson(original.historicalName(), 0),
@@ -287,6 +314,7 @@ public class TempleAiService {
                 escapeJson(original.history(), 0),
                 escapeJson(original.generalInformation(), 0),
                 escapeJson(original.address(), 0),
+                escapeJson(original.location(), 0),
                 escapeJson(original.openingTime(), 0),
                 escapeJson(original.festival(), 0),
                 escapeJson(original.nearByRailwayStation(), 0),
