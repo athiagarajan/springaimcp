@@ -46,6 +46,17 @@ export const App: React.FC = () => {
     setIsLoadingTemples(false);
   };
 
+  const handleAddTempleToRecords = (temple: Temple) => {
+    setTableTemples((prev) => {
+      // If already present, keep as is (no duplicate)
+      if (prev.some((t) => t.id === temple.id)) {
+        return prev;
+      }
+      // Prepend newly added temple to top of table
+      return [temple, ...prev];
+    });
+  };
+
   const handleSearch = async (prompt: string) => {
     // 1. Immediately clean up reasoning log, map pins, and temple record entries
     setStreamLog('');
@@ -94,6 +105,7 @@ export const App: React.FC = () => {
             temples={mapTemples}
             selectedTemple={selectedTemple}
             onSelectTemple={(t) => setSelectedTemple(t)}
+            onAddTemple={handleAddTempleToRecords}
           />
         </div>
 
@@ -101,6 +113,7 @@ export const App: React.FC = () => {
           temples={tableTemples}
           onSelectTemple={(t) => setSelectedTemple(t)}
           isLoading={isLoadingTemples}
+          onAddTemple={handleAddTempleToRecords}
         />
       </main>
 

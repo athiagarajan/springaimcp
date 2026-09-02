@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Tooltip, useMap } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import L from 'leaflet';
 import { Temple } from '../types/temple';
-import { MapPin, Navigation, Layers } from 'lucide-react';
+import { MapPin, Navigation, Layers, Plus } from 'lucide-react';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 
@@ -11,6 +11,7 @@ interface TempleMapProps {
   temples: Temple[];
   selectedTemple?: Temple | null;
   onSelectTemple?: (temple: Temple) => void;
+  onAddTemple?: (temple: Temple) => void;
 }
 
 const customIcon = new L.Icon({
@@ -52,7 +53,7 @@ const MapRecenter: React.FC<{
   return null;
 };
 
-export const TempleMap: React.FC<TempleMapProps> = ({ temples, selectedTemple, onSelectTemple }) => {
+export const TempleMap: React.FC<TempleMapProps> = ({ temples, selectedTemple, onSelectTemple, onAddTemple }) => {
   const [enableClustering, setEnableClustering] = useState<boolean>(true);
 
   // 1. Initial coordinates assignment for each temple
@@ -105,20 +106,81 @@ export const TempleMap: React.FC<TempleMapProps> = ({ temples, selectedTemple, o
         position={[lat, lng]} 
         icon={customIcon}
         eventHandlers={{
+          add: (e) => {
+            const el = e.target.getElement();
+            if (el) {
+              // Enable HTML5 drag from map pin to temple records table
+              el.setAttribute('draggable', 'true');
+              el.setAttribute('title', `${temple.name} (Drag pin to Temple Records table to add)`);
+              el.style.cursor = 'grab';
+
+              el.ondragstart = (dragEvt: DragEvent) => {
+                if (dragEvt.dataTransfer) {
+                  dragEvt.dataTransfer.setData('application/json', JSON.stringify(temple));
+                  dragEvt.dataTransfer.setData('text/plain', String(temple.id));
+                  dragEvt.dataTransfer.effectAllowed = 'copy';
+                }
+              };
+            }
+          },
           click: () => onSelectTemple && onSelectTemple(temple)
         }}
       >
+        {/* Minimal Details Tooltip shown on Hover */}
+        <Tooltip direction="top" offset={[0, -28]} opacity={1}>
+          <div className="p-2.5 min-w-[200px] max-w-[280px] font-sans bg-slate-900/95 text-slate-100 rounded-xl shadow-xl border border-slate-700 pointer-events-auto">
+            <h4 className="font-bold text-xs text-indigo-300 line-clamp-1">{temple.name}</h4>
+            <p className="text-[11px] text-slate-400 font-medium">{temple.city || 'N/A'}, {temple.district || temple.state}</p>
+            {temple.moolavar && (
+              <p className="text-[11px] text-emerald-400 mt-1 line-clamp-1">
+                <strong className="text-slate-400">Moolavar:</strong> {temple.moolavar}
+              </p>
+            )}
+            <div className="mt-2 pt-1.5 border-t border-slate-800 flex items-center justify-between text-[10px]">
+              <span className="text-slate-400 italic">Drag to Records Table</span>
+              {onAddTemple && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onAddTemple(temple);
+                  }}
+                  className="bg-indigo-600 hover:bg-indigo-500 text-white px-2 py-0.5 rounded text-[10px] font-semibold cursor-pointer transition shadow-sm flex items-center gap-1"
+                  title="Add this temple to records list"
+                >
+                  <Plus className="w-2.5 h-2.5" />
+                  <span>Add to Table</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </Tooltip>
+
+        {/* Full Details Popup shown on Click */}
         <Popup className="custom-popup">
           <div className="p-1 font-sans">
             <h3 className="font-bold text-slate-900 text-sm">{temple.name}</h3>
             <p className="text-xs text-slate-600 font-semibold">{temple.city || 'N/A'}, {temple.district || temple.state}</p>
             {temple.moolavar && <p className="text-[11px] text-slate-500 mt-1"><strong>Moolavar:</strong> {temple.moolavar}</p>}
-            <button
-              onClick={() => onSelectTemple && onSelectTemple(temple)}
-              className="mt-2 text-[11px] bg-indigo-600 hover:bg-indigo-700 text-white px-2 py-1 rounded font-semibold transition"
-            >
-              View Details
-            </button>
+            <div className="mt-2 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => onSelectTemple && onSelectTemple(temple)}
+                className="text-[11px] bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1 rounded font-semibold transition cursor-pointer"
+              >
+                View Details
+              </button>
+              {onAddTemple && (
+                <button
+                  type="button"
+                  onClick={() => onAddTemple(temple)}
+                  className="text-[11px] bg-slate-700 hover:bg-slate-600 text-white px-2 py-1 rounded font-semibold transition cursor-pointer flex items-center gap-1"
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>Add to Table</span>
+                </button>
+              )}
+            </div>
           </div>
         </Popup>
       </Marker>

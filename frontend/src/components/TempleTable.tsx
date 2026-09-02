@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
 import { Temple } from '../types/temple';
-import { Search, MapPin, Eye, Calendar, Sparkles, ChevronDown, ChevronUp } from 'lucide-react';
+import { Search, MapPin, Eye, Calendar, Sparkles, ChevronDown, ChevronUp, Download } from 'lucide-react';
 
 interface TempleTableProps {
   temples: Temple[];
   onSelectTemple: (temple: Temple) => void;
   isLoading: boolean;
+  onAddTemple?: (temple: Temple) => void;
 }
 
-export const TempleTable: React.FC<TempleTableProps> = ({ temples, onSelectTemple, isLoading }) => {
+export const TempleTable: React.FC<TempleTableProps> = ({ temples, onSelectTemple, isLoading, onAddTemple }) => {
   const [filterText, setFilterText] = useState('');
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
 
   const filteredTemples = temples.filter(t => 
     t.name.toLowerCase().includes(filterText.toLowerCase()) ||
@@ -19,8 +21,55 @@ export const TempleTable: React.FC<TempleTableProps> = ({ temples, onSelectTempl
     (t.moolavar && t.moolavar.toLowerCase().includes(filterText.toLowerCase()))
   );
 
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+    if (!isDragOver) setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setIsDragOver(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+
+    try {
+      const dataStr = e.dataTransfer.getData('application/json');
+      if (dataStr) {
+        const droppedTemple: Temple = JSON.parse(dataStr);
+        if (onAddTemple) {
+          onAddTemple(droppedTemple);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to parse dropped temple data:', err);
+    }
+  };
+
   return (
-    <div className="glass-panel rounded-2xl p-5 flex flex-col space-y-4 transition-all duration-300">
+    <div 
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      className={`glass-panel rounded-2xl p-5 flex flex-col space-y-4 transition-all duration-300 relative ${
+        isDragOver 
+          ? 'border-2 border-dashed border-indigo-400 bg-indigo-950/40 shadow-2xl shadow-indigo-500/20 scale-[1.005]' 
+          : 'border border-slate-800'
+      }`}
+    >
+      {/* Visual Drop Overlay when dragging pin over records table */}
+      {isDragOver && (
+        <div className="absolute inset-0 bg-indigo-950/80 backdrop-blur-sm z-30 rounded-2xl flex flex-col items-center justify-center space-y-2 pointer-events-none animate-in fade-in duration-150 border-2 border-dashed border-indigo-400">
+          <Download className="w-10 h-10 text-indigo-400 animate-bounce" />
+          <p className="text-sm font-bold font-mono text-white">Release pin to add temple to records!</p>
+          <p className="text-xs text-indigo-300">Temple will be listed alongside query results</p>
+        </div>
+      )}
+
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3">
           <button
@@ -39,7 +88,7 @@ export const TempleTable: React.FC<TempleTableProps> = ({ temples, onSelectTempl
               </span>
             </h2>
             <p className="text-xs text-slate-400">
-              {isCollapsed ? "Click button on left to expand records view" : "Data retrieved from PostgreSQL templeinfo database"}
+              {isCollapsed ? "Click button on left to expand records view" : "Data retrieved from database • Drag pins from map here to add entries"}
             </p>
           </div>
         </div>
@@ -70,7 +119,7 @@ export const TempleTable: React.FC<TempleTableProps> = ({ temples, onSelectTempl
               <Search className="w-8 h-8 text-slate-600 mb-1" />
               <p className="text-slate-300 font-sans text-sm font-semibold">No Temple Records Displayed</p>
               <p className="text-slate-400 text-xs text-center max-w-md">
-                Enter an AI prompt above (e.g. <span className="text-indigo-300 font-mono">"find murugan temple in thanjavur"</span>) to load and view matching temple details.
+                Enter an AI prompt above, or <span className="text-indigo-300 font-semibold">drag and drop a pin from the map</span> to add temple details here.
               </p>
             </div>
           ) : (

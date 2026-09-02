@@ -66,4 +66,21 @@ describe('TempleTable Component', () => {
 
     expect(screen.getByText(/No Temple Records Displayed/i)).toBeInTheDocument();
   });
+
+  it('handles drop event to add a temple into records table', () => {
+    const handleAdd = vi.fn();
+    const { container } = render(
+      <TempleTable temples={[]} onSelectTemple={vi.fn()} isLoading={false} onAddTemple={handleAdd} />
+    );
+
+    const tableRoot = container.firstChild as HTMLElement;
+    fireEvent.dragOver(tableRoot, { dataTransfer: { dropEffect: 'copy' } });
+    fireEvent.drop(tableRoot, {
+      dataTransfer: {
+        getData: (format: string) => (format === 'application/json' ? JSON.stringify(sampleTemple) : ''),
+      },
+    });
+
+    expect(handleAdd).toHaveBeenCalledWith(sampleTemple);
+  });
 });
