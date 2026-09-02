@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Temple } from '../types/temple';
-import { Search, MapPin, Eye, Calendar, Sparkles, ChevronDown, ChevronUp, Download } from 'lucide-react';
+import { getGlobalDraggedTemple, setGlobalDraggedTemple } from '../services/dragDropState';
+import { Search, MapPin, Eye, Calendar, Sparkles, ChevronDown, ChevronUp, Download, CheckCircle } from 'lucide-react';
 
 interface TempleTableProps {
   temples: Temple[];
@@ -14,6 +15,7 @@ export const TempleTable: React.FC<TempleTableProps> = ({ temples, allTemples, o
   const [filterText, setFilterText] = useState('');
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [lastAddedName, setLastAddedName] = useState<string | null>(null);
 
   const filteredTemples = temples.filter(t => 
     t.name.toLowerCase().includes(filterText.toLowerCase()) ||
@@ -49,24 +51,39 @@ export const TempleTable: React.FC<TempleTableProps> = ({ temples, allTemples, o
     setIsDragOver(false);
 
     try {
-      let droppedTemple: Temple | null = null;
-      const dataStr = e.dataTransfer.getData('application/json');
-      if (dataStr) {
-        droppedTemple = JSON.parse(dataStr);
-      }
+      // 1. Primary: Retrieve direct in-memory object
+      let droppedTemple: Temple | null = getGlobalDraggedTemple();
+
+      // 2. Secondary: Parse text/plain from dataTransfer
       if (!droppedTemple) {
-        const textId = e.dataTransfer.getData('text/plain');
-        if (textId) {
-          const pool = allTemples && allTemples.length > 0 ? allTemples : temples;
-          droppedTemple = pool.find((t) => String(t.id) === textId) || null;
+        const rawText = e.dataTransfer.getData('text/plain') || e.dataTransfer.getData('text');
+        if (rawText) {
+          try {
+            droppedTemple = JSON.parse(rawText);
+          } catch {
+            const pool = allTemples && allTemples.length > 0 ? allTemples : temples;
+            droppedTemple = pool.find((t) => String(t.id) === rawText) || null;
+          }
+        }
+      }
+
+      // 3. Tertiary: Parse application/json
+      if (!droppedTemple) {
+        const dataStr = e.dataTransfer.getData('application/json');
+        if (dataStr) {
+          droppedTemple = JSON.parse(dataStr);
         }
       }
 
       if (droppedTemple && onAddTemple) {
         onAddTemple(droppedTemple);
+        setLastAddedName(droppedTemple.name);
+        setTimeout(() => setLastAddedName(null), 3000);
       }
     } catch (err) {
       console.error('Failed to parse dropped temple data:', err);
+    } finally {
+      setGlobalDraggedTemple(null);
     }
   };
 
@@ -78,16 +95,24 @@ export const TempleTable: React.FC<TempleTableProps> = ({ temples, allTemples, o
       onDrop={handleDrop}
       className={`glass-panel rounded-2xl p-5 flex flex-col space-y-4 transition-all duration-300 relative ${
         isDragOver 
-          ? 'border-2 border-dashed border-indigo-400 bg-indigo-950/40 shadow-2xl shadow-indigo-500/20 scale-[1.005]' 
+          ? 'border-2 border-dashed border-indigo-400 bg-indigo-950/50 shadow-2xl shadow-indigo-500/30 scale-[1.005]' 
           : 'border border-slate-800'
       }`}
     >
       {/* Visual Drop Overlay when dragging pin over records table */}
       {isDragOver && (
-        <div className="absolute inset-0 bg-indigo-950/80 backdrop-blur-sm z-30 rounded-2xl flex flex-col items-center justify-center space-y-2 pointer-events-none animate-in fade-in duration-150 border-2 border-dashed border-indigo-400">
+        <div className="absolute inset-0 bg-indigo-950/85 backdrop-blur-sm z-30 rounded-2xl flex flex-col items-center justify-center space-y-2 pointer-events-none animate-in fade-in duration-150 border-2 border-dashed border-indigo-400">
           <Download className="w-10 h-10 text-indigo-400 animate-bounce" />
           <p className="text-sm font-bold font-mono text-white">Release pin to add temple to records!</p>
-          <p className="text-xs text-indigo-300">Temple will be listed alongside query results</p>
+          <p className="text-xs text-indigo-300">Temple will be added directly to the results list below</p>
+        </div>
+      )}
+
+      {/* Added Notification Toast */}
+      {lastAddedName && (
+        <div className="absolute top-4 right-4 z-40 bg-emerald-950 border border-emerald-500/80 text-emerald-300 text-xs font-semibold px-3 py-1.5 rounded-xl shadow-xl flex items-center gap-2 animate-in fade-in slide-in-from-top-2 duration-200">
+          <CheckCircle className="w-4 h-4 text-emerald-400" />
+          <span>Added "{lastAddedName}" to records!</span>
         </div>
       )}
 

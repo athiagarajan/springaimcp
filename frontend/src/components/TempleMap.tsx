@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Tooltip, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import L from 'leaflet';
 import { Temple } from '../types/temple';
-import { MapPin, Navigation, Layers, Plus } from 'lucide-react';
+import { setGlobalDraggedTemple } from '../services/dragDropState';
+import { MapPin, Navigation, Layers, Plus, Eye, GripVertical } from 'lucide-react';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 
@@ -53,14 +54,15 @@ const MapRecenter: React.FC<{
   return null;
 };
 
-// Component for rendering an individual draggable map marker
+// Component for individual draggable temple marker
 const DraggableTempleMarker: React.FC<{
   temple: Temple;
   lat: number;
   lng: number;
   onSelectTemple?: (temple: Temple) => void;
   onAddTemple?: (temple: Temple) => void;
-}> = ({ temple, lat, lng, onSelectTemple, onAddTemple }) => {
+  onHover?: (temple: Temple) => void;
+}> = ({ temple, lat, lng, onSelectTemple, onAddTemple, onHover }) => {
   const map = useMap();
   const markerRef = React.useRef<L.Marker | null>(null);
 
@@ -76,19 +78,23 @@ const DraggableTempleMarker: React.FC<{
     el.setAttribute('title', `${temple.name} (Drag pin to Temple Records table to add)`);
     el.style.cursor = 'grab';
 
-    const handleMouseEnter = () => {
-      // Temporarily disable map dragging so dragging the pin will not pan the map!
+    // Prevent Leaflet map from panning when pressing/dragging marker
+    L.DomEvent.disableClickPropagation(el);
+
+    const handleMouseDown = (e: MouseEvent) => {
       map.dragging.disable();
+      e.stopPropagation();
     };
 
-    const handleMouseLeave = () => {
+    const handleMouseUp = () => {
       map.dragging.enable();
     };
 
     const handleDragStart = (e: DragEvent) => {
+      setGlobalDraggedTemple(temple);
       if (e.dataTransfer) {
         e.dataTransfer.setData('application/json', JSON.stringify(temple));
-        e.dataTransfer.setData('text/plain', String(temple.id));
+        e.dataTransfer.setData('text/plain', JSON.stringify(temple));
         e.dataTransfer.effectAllowed = 'copy';
 
         // Floating drag feedback badge
@@ -116,16 +122,17 @@ const DraggableTempleMarker: React.FC<{
 
     const handleDragEnd = () => {
       map.dragging.enable();
+      setTimeout(() => setGlobalDraggedTemple(null), 300);
     };
 
-    el.addEventListener('mouseenter', handleMouseEnter);
-    el.addEventListener('mouseleave', handleMouseLeave);
+    el.addEventListener('mousedown', handleMouseDown, true);
+    el.addEventListener('mouseup', handleMouseUp);
     el.addEventListener('dragstart', handleDragStart);
     el.addEventListener('dragend', handleDragEnd);
 
     return () => {
-      el.removeEventListener('mouseenter', handleMouseEnter);
-      el.removeEventListener('mouseleave', handleMouseLeave);
+      el.removeEventListener('mousedown', handleMouseDown, true);
+      el.removeEventListener('mouseup', handleMouseUp);
       el.removeEventListener('dragstart', handleDragStart);
       el.removeEventListener('dragend', handleDragEnd);
       map.dragging.enable();
@@ -138,59 +145,38 @@ const DraggableTempleMarker: React.FC<{
       position={[lat, lng]}
       icon={customIcon}
       eventHandlers={{
+        mouseover: (e) => {
+          e.target.openPopup();
+          if (onHover) onHover(temple);
+        },
         click: () => onSelectTemple && onSelectTemple(temple)
       }}
     >
-      {/* Minimal Details Tooltip shown on Hover - Interactive so buttons inside can be clicked */}
-      <Tooltip interactive={true} direction="top" offset={[0, -28]} opacity={1}>
-        <div
-          className="p-2.5 min-w-[200px] max-w-[280px] font-sans bg-slate-900 text-slate-100 rounded-xl shadow-2xl border border-slate-700 pointer-events-auto"
-          onMouseEnter={() => map.dragging.disable()}
-          onMouseLeave={() => map.dragging.enable()}
-        >
-          <h4 className="font-bold text-xs text-indigo-300 line-clamp-1">{temple.name}</h4>
-          <p className="text-[11px] text-slate-400 font-medium">{temple.city || 'N/A'}, {temple.district || temple.state}</p>
+      {/* Details Popup shown on Hover & Click */}
+      <Popup className="custom-popup" autoPan={false}>
+        <div className="p-2 font-sans min-w-[210px] max-w-[280px]">
+          <h3 className="font-bold text-slate-100 text-sm">{temple.name}</h3>
+          <p className="text-xs text-slate-400 font-semibold">{temple.city || 'N/A'}, {temple.district || temple.state}</p>
           {temple.moolavar && (
-            <p className="text-[11px] text-emerald-400 mt-1 line-clamp-1">
+            <p className="text-[11px] text-emerald-400 mt-1">
               <strong className="text-slate-400">Moolavar:</strong> {temple.moolavar}
             </p>
           )}
-          <div className="mt-2 pt-1.5 border-t border-slate-800 flex items-center justify-between text-[10px]">
-            <span className="text-slate-400 italic">Drag to Records Table</span>
-            {onAddTemple && (
-              <button
-                type="button"
-                onMouseDown={(e) => e.stopPropagation()}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  onAddTemple(temple);
-                }}
-                className="bg-indigo-600 hover:bg-indigo-500 text-white px-2 py-0.5 rounded text-[10px] font-semibold cursor-pointer transition shadow-sm flex items-center gap-1"
-                title="Add this temple to records list"
-              >
-                <Plus className="w-2.5 h-2.5" />
-                <span>Add to Table</span>
-              </button>
-            )}
-          </div>
-        </div>
-      </Tooltip>
 
-      {/* Full Details Popup shown on Click */}
-      <Popup className="custom-popup">
-        <div className="p-1 font-sans">
-          <h3 className="font-bold text-slate-900 text-sm">{temple.name}</h3>
-          <p className="text-xs text-slate-600 font-semibold">{temple.city || 'N/A'}, {temple.district || temple.state}</p>
-          {temple.moolavar && <p className="text-[11px] text-slate-500 mt-1"><strong>Moolavar:</strong> {temple.moolavar}</p>}
-          <div className="mt-2 flex items-center gap-2">
+          <div className="mt-3 pt-2 border-t border-slate-800 flex items-center gap-2">
             <button
               type="button"
-              onClick={() => onSelectTemple && onSelectTemple(temple)}
-              className="text-[11px] bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1 rounded font-semibold transition cursor-pointer"
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelectTemple && onSelectTemple(temple);
+              }}
+              className="text-[11px] bg-indigo-600 hover:bg-indigo-500 text-white px-2.5 py-1 rounded-lg font-semibold transition cursor-pointer flex items-center gap-1"
             >
-              View Details
+              <Eye className="w-3 h-3" />
+              <span>Details</span>
             </button>
+
             {onAddTemple && (
               <button
                 type="button"
@@ -199,12 +185,27 @@ const DraggableTempleMarker: React.FC<{
                   e.stopPropagation();
                   onAddTemple(temple);
                 }}
-                className="text-[11px] bg-slate-700 hover:bg-slate-600 text-white px-2 py-1 rounded font-semibold transition cursor-pointer flex items-center gap-1"
+                className="text-[11px] bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-1 rounded-lg font-semibold transition cursor-pointer flex items-center gap-1 shadow-sm"
+                title="Add to Temple Records table"
               >
                 <Plus className="w-3 h-3" />
                 <span>Add to Table</span>
               </button>
             )}
+          </div>
+
+          <div
+            draggable={true}
+            onDragStart={(e) => {
+              setGlobalDraggedTemple(temple);
+              e.dataTransfer.setData('text/plain', JSON.stringify(temple));
+              e.dataTransfer.effectAllowed = 'copy';
+            }}
+            className="mt-2 text-center text-[10px] font-semibold text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-700 py-1 px-2 rounded-lg border border-slate-700 cursor-grab active:cursor-grabbing flex items-center justify-center gap-1 transition"
+            title="Press and drag down to Temple Records table"
+          >
+            <GripVertical className="w-3 h-3 text-slate-400" />
+            <span>Drag to Records Table</span>
           </div>
         </div>
       </Popup>
@@ -214,6 +215,7 @@ const DraggableTempleMarker: React.FC<{
 
 export const TempleMap: React.FC<TempleMapProps> = ({ temples, selectedTemple, onSelectTemple, onAddTemple }) => {
   const [enableClustering, setEnableClustering] = useState<boolean>(true);
+  const [previewTemple, setPreviewTemple] = useState<Temple | null>(null);
 
   // 1. Initial coordinates assignment for each temple
   const rawMapItems = temples.map((temple, idx) => {
@@ -267,6 +269,7 @@ export const TempleMap: React.FC<TempleMapProps> = ({ temples, selectedTemple, o
         lng={lng}
         onSelectTemple={onSelectTemple}
         onAddTemple={onAddTemple}
+        onHover={(t) => setPreviewTemple(t)}
       />
     ));
 
@@ -301,28 +304,85 @@ export const TempleMap: React.FC<TempleMapProps> = ({ temples, selectedTemple, o
         </div>
       </div>
 
-      <div className="flex-1 rounded-xl overflow-hidden border border-slate-800 z-10 min-h-[300px]">
+      <div className="flex-1 rounded-xl overflow-hidden border border-slate-800 z-10 min-h-[300px] relative">
         {mapItems.length > 0 ? (
-          <MapContainer center={defaultCenter} zoom={7} scrollWheelZoom={true} className="w-full h-full min-h-[320px]">
-            <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-            <MapRecenter selectedTemple={selectedTemple} mapItems={mapItems} />
+          <>
+            <MapContainer center={defaultCenter} zoom={7} scrollWheelZoom={true} className="w-full h-full min-h-[320px]">
+              <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              />
+              <MapRecenter selectedTemple={selectedTemple} mapItems={mapItems} />
 
-            {enableClustering ? (
-              <MarkerClusterGroup
-                chunkedLoading
-                maxClusterRadius={50}
-                spiderfyOnMaxZoom={true}
-                showCoverageOnHover={false}
-              >
-                {renderMarkers()}
-              </MarkerClusterGroup>
-            ) : (
-              renderMarkers()
+              {enableClustering ? (
+                <MarkerClusterGroup
+                  chunkedLoading
+                  maxClusterRadius={50}
+                  spiderfyOnMaxZoom={true}
+                  showCoverageOnHover={false}
+                >
+                  {renderMarkers()}
+                </MarkerClusterGroup>
+              ) : (
+                renderMarkers()
+              )}
+            </MapContainer>
+
+            {/* Quick Preview Card at Bottom of Map when any pin is hovered */}
+            {previewTemple && (
+              <div className="absolute bottom-3 left-3 right-3 z-[1100] glass-panel bg-slate-950/90 border border-indigo-500/40 rounded-xl p-3 shadow-2xl flex items-center justify-between gap-3 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-white truncate">{previewTemple.name}</span>
+                    <span className="text-[10px] font-mono text-indigo-400 bg-indigo-950 px-1.5 py-0.5 rounded border border-indigo-800/60 shrink-0">
+                      #{previewTemple.id}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 truncate">
+                    {previewTemple.city || 'N/A'}, {previewTemple.district || previewTemple.state}
+                    {previewTemple.moolavar && <span className="text-emerald-400 ml-2">• Deity: {previewTemple.moolavar}</span>}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  {onAddTemple && (
+                    <button
+                      type="button"
+                      onClick={() => onAddTemple(previewTemple)}
+                      className="text-xs bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg font-semibold transition cursor-pointer flex items-center gap-1 shadow-sm"
+                      title="Add to Temple Records table"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Add to Table</span>
+                    </button>
+                  )}
+
+                  <div
+                    draggable={true}
+                    onDragStart={(e) => {
+                      setGlobalDraggedTemple(previewTemple);
+                      e.dataTransfer.setData('text/plain', JSON.stringify(previewTemple));
+                      e.dataTransfer.effectAllowed = 'copy';
+                    }}
+                    className="text-xs font-semibold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg border border-slate-700 cursor-grab active:cursor-grabbing flex items-center gap-1 transition"
+                    title="Drag down to Temple Records table"
+                  >
+                    <GripVertical className="w-3.5 h-3.5" />
+                    <span>Drag to Table</span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => onSelectTemple && onSelectTemple(previewTemple)}
+                    className="text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg font-semibold transition cursor-pointer flex items-center gap-1"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>Details</span>
+                  </button>
+                </div>
+              </div>
             )}
-          </MapContainer>
+          </>
         ) : (
           <div className="h-full flex flex-col items-center justify-center text-slate-500 text-xs font-mono p-6 text-center">
             <Navigation className="w-8 h-8 mb-2 text-slate-600 animate-bounce" />
