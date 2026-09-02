@@ -3,22 +3,156 @@ import { Temple } from '../types/temple';
 import { fetchTempleTranslation } from '../services/api';
 import { X, MapPin, Calendar, Phone, Clock, Train, Plane, Info, ShieldAlert, Crosshair, Languages, Loader2 } from 'lucide-react';
 
+export type SupportedLanguage = 'en' | 'ta' | 'te' | 'hi';
+
 interface TempleDetailModalProps {
   temple: Temple | null;
   onClose: () => void;
   onSelectTemple?: (temple: Temple) => void;
 }
 
+const UI_TEXT: Record<SupportedLanguage, {
+  temple: string;
+  historicalName: string;
+  locateMap: string;
+  deitiesWorship: string;
+  moolavar: string;
+  urchavar: string;
+  ammanThayar: string;
+  agamamPooja: string;
+  sacredSymbols: string;
+  thalaVirutcham: string;
+  theertham: string;
+  singers: string;
+  oldYear: string;
+  speciality: string;
+  history: string;
+  phone: string;
+  openingTime: string;
+  address: string;
+  railway: string;
+  airport: string;
+  accommodation: string;
+  locatePinFooter: string;
+  closeDetails: string;
+  translatingMsg: string;
+}> = {
+  en: {
+    temple: 'Temple',
+    historicalName: 'Historical Name:',
+    locateMap: 'Click to Locate Pin on Map',
+    deitiesWorship: 'Deities & Worship',
+    moolavar: 'Moolavar:',
+    urchavar: 'Urchavar:',
+    ammanThayar: 'Amman / Thayar:',
+    agamamPooja: 'Agamam / Pooja:',
+    sacredSymbols: 'Sacred Symbols',
+    thalaVirutcham: 'Thala Virutcham:',
+    theertham: 'Theertham:',
+    singers: 'Singers:',
+    oldYear: 'Old / Construction Year:',
+    speciality: 'Speciality & Importance',
+    history: 'Temple History',
+    phone: 'Phone:',
+    openingTime: 'Opening Timings:',
+    address: 'Address:',
+    railway: 'Nearest Railway:',
+    airport: 'Nearest Airport:',
+    accommodation: 'Accommodation:',
+    locatePinFooter: 'Locate Pin on Map',
+    closeDetails: 'Close Details',
+    translatingMsg: 'Translating all temple details via Gemini AI...',
+  },
+  ta: {
+    temple: 'திருக்கோயில்',
+    historicalName: 'வரலாற்றுப் பெயர்:',
+    locateMap: 'வரைபடத்தில் பார்க்க',
+    deitiesWorship: 'மூலவர் & வழிபாடுகள்',
+    moolavar: 'மூலவர்:',
+    urchavar: 'உற்சவர்:',
+    ammanThayar: 'அம்மன் / தாயார்:',
+    agamamPooja: 'ஆகமம் / பூஜை:',
+    sacredSymbols: 'தல விருட்சம் & புனித குறியீடுகள்',
+    thalaVirutcham: 'தல விருட்சம்:',
+    theertham: 'தீர்த்தம்:',
+    singers: 'பாடியவர்கள்:',
+    oldYear: 'பழமை / அமைக்கப்பட்ட ஆண்டு:',
+    speciality: 'கோயில் சிறப்புகள் & முக்கியத்துவம்',
+    history: 'கோயில் வரலாறு',
+    phone: 'தொலைபேசி:',
+    openingTime: 'நடை திறக்கும் நேரம்:',
+    address: 'முகவரி:',
+    railway: 'அருகிலுள்ள ரயில் நிலையம்:',
+    airport: 'அருகிலுள்ள விமான நிலையம்:',
+    accommodation: 'தங்குமிடம்:',
+    locatePinFooter: 'வரைபடத்தில் இருப்பிடத்தைக் காட்டு',
+    closeDetails: 'விவரங்களை மூடுக',
+    translatingMsg: 'ஜெமினி AI மூலம் கோயிலின் அனைத்து விவரங்களும் தமிழில் மொழிபெயர்க்கப்படுகிறது...',
+  },
+  te: {
+    temple: 'ఆలయం',
+    historicalName: 'చారిత్రక పేరు:',
+    locateMap: 'మ్యాప్‌లో చూడండి',
+    deitiesWorship: 'మూలవిరాట్ & పూజలు',
+    moolavar: 'మూలవిరాట్:',
+    urchavar: 'ఉత్సవమూర్తి:',
+    ammanThayar: 'అమ్మవారు / తాయారు:',
+    agamamPooja: 'ఆగమం / పూజ:',
+    sacredSymbols: 'పవిత్ర వృక్షం & తీర్థాలు',
+    thalaVirutcham: 'స్థల వృక్షం:',
+    theertham: 'తీర్థం:',
+    singers: 'కీర్తించినవారు:',
+    oldYear: 'నిర్మాణ కాలం:',
+    speciality: 'ఆలయ విశిష్టత & ప్రాముఖ్యత',
+    history: 'స్థల పురాణం & చరిత్ర',
+    phone: 'ఫోన్ నంబరు:',
+    openingTime: 'దర్శన వేళలు:',
+    address: 'చిరునామా:',
+    railway: 'సమీప రైల్వే స్టేషన్:',
+    airport: 'సమీప విమానాశ్రయం:',
+    accommodation: 'వసతి సౌకర్యాలు:',
+    locatePinFooter: 'మ్యాప్‌లో ఆలయాన్ని గుర్తించండి',
+    closeDetails: 'వివరాలు మూసివేయి',
+    translatingMsg: 'జెమిని AI ద్వారా ఆలయ వివరాలన్నీ తెలుగులోకి అనువదించబడుతున్నాయి...',
+  },
+  hi: {
+    temple: 'मंदिर',
+    historicalName: 'ऐतिहासिक नाम:',
+    locateMap: 'मानचित्र पर देखें',
+    deitiesWorship: 'मुख्य देवता एवं पूजा विधि',
+    moolavar: 'मूलवर (मुख्य देवता):',
+    urchavar: 'उत्सव मूर्ति:',
+    ammanThayar: 'अम्मन / देवी:',
+    agamamPooja: 'आगम / पूजा:',
+    sacredSymbols: 'पवित्र वृक्ष एवं तीर्थ',
+    thalaVirutcham: 'थल वृक्ष:',
+    theertham: 'पवित्र तीर्थ:',
+    singers: 'स्तुतिगान / संत:',
+    oldYear: 'प्राचीनता / निर्माण वर्ष:',
+    speciality: 'मंदिर की विशेषता एवं महत्व',
+    history: 'मंदिर का इतिहास एवं कथा',
+    phone: 'दूरभाष (फोन):',
+    openingTime: 'दर्शन का समय:',
+    address: 'पता:',
+    railway: 'निकटतम रेलवे स्टेशन:',
+    airport: 'निकटतम हवाई अड्डा:',
+    accommodation: 'ठहरने की व्यवस्था:',
+    locatePinFooter: 'मानचित्र पर मंदिर देखें',
+    closeDetails: 'विवरण बंद करें',
+    translatingMsg: 'जेमिनी AI द्वारा मंदिर का संपूर्ण विवरण हिन्दी में अनुवादित किया जा रहा है...',
+  },
+};
+
 export const TempleDetailModal: React.FC<TempleDetailModalProps> = ({ temple, onClose, onSelectTemple }) => {
-  const [language, setLanguage] = useState<'en' | 'ta'>('en');
-  const [translatedTemple, setTranslatedTemple] = useState<Temple | null>(null);
+  const [displayedLang, setDisplayedLang] = useState<SupportedLanguage>('en');
+  const [translationCache, setTranslationCache] = useState<Partial<Record<SupportedLanguage, Temple>>>({});
   const [isTranslating, setIsTranslating] = useState<boolean>(false);
   const [translationError, setTranslationError] = useState<string | null>(null);
 
-  // Reset state when a new temple is opened
+  // When temple changes, reset to default English display
   useEffect(() => {
-    setLanguage('en');
-    setTranslatedTemple(null);
+    setDisplayedLang('en');
+    setTranslationCache({});
     setIsTranslating(false);
     setTranslationError(null);
   }, [temple?.id]);
@@ -32,36 +166,47 @@ export const TempleDetailModal: React.FC<TempleDetailModalProps> = ({ temple, on
     onClose();
   };
 
-  const handleToggleLanguage = async () => {
-    if (language === 'en') {
-      // Switch to Tamil
-      setLanguage('ta');
-      if (!translatedTemple && !isTranslating) {
-        setIsTranslating(true);
-        setTranslationError(null);
-        try {
-          const result = await fetchTempleTranslation(temple.id, 'ta');
-          setTranslatedTemple(result);
-        } catch (err: any) {
-          console.error('Translation error:', err);
-          setTranslationError('Unable to translate details right now. Showing English version.');
-        } finally {
-          setIsTranslating(false);
-        }
-      }
-    } else {
-      // Switch back to English
-      setLanguage('en');
+  const handleLanguageChange = async (targetLang: SupportedLanguage) => {
+    if (targetLang === 'en') {
+      setDisplayedLang('en');
+      setTranslationError(null);
+      return;
+    }
+
+    // Check if already cached in component state
+    if (translationCache[targetLang]) {
+      setDisplayedLang(targetLang);
+      setTranslationError(null);
+      return;
+    }
+
+    // Fetch from backend (which also has backend Caffeine/Map cache)
+    setIsTranslating(true);
+    setTranslationError(null);
+    try {
+      const result = await fetchTempleTranslation(temple.id, targetLang);
+      setTranslationCache((prev) => ({ ...prev, [targetLang]: result }));
+      setDisplayedLang(targetLang);
+    } catch (err: any) {
+      console.error('Translation error:', err);
+      setTranslationError('Unable to translate details right now. Displaying English version.');
+    } finally {
+      setIsTranslating(false);
     }
   };
 
-  const displayTemple = (language === 'ta' && translatedTemple) ? translatedTemple : temple;
+  const displayTemple = (displayedLang !== 'en' && translationCache[displayedLang])
+    ? translationCache[displayedLang]!
+    : temple;
+
+  const t = UI_TEXT[displayedLang] || UI_TEXT.en;
 
   const gpsLabel = temple.hfLat && temple.hfLan
     ? `${temple.hfLat.toFixed(4)}° N, ${temple.hfLan.toFixed(4)}° E`
     : 'GPS Location Available';
 
-  const isTa = language === 'ta';
+  // Dropdown value: defaults to 'ta' when viewing English; defaults to 'en' when viewing non-English
+  const comboValue = displayedLang === 'en' ? 'ta' : 'en';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
@@ -71,7 +216,7 @@ export const TempleDetailModal: React.FC<TempleDetailModalProps> = ({ temple, on
           <div className="flex-1 pr-4">
             <div className="flex items-center gap-2 flex-wrap mb-1">
               <span className="text-xs font-mono text-indigo-400 bg-indigo-950 border border-indigo-800 px-2 py-0.5 rounded">
-                {isTa ? 'திருக்கோயில்' : 'Temple'} #{temple.id}
+                {t.temple} #{temple.id}
               </span>
               <span className="text-xs font-mono text-slate-400">
                 {displayTemple.city}, {displayTemple.district}, {displayTemple.state}
@@ -80,7 +225,7 @@ export const TempleDetailModal: React.FC<TempleDetailModalProps> = ({ temple, on
             <h2 className="text-2xl font-extrabold text-white">{displayTemple.name}</h2>
             {displayTemple.historicalName && (
               <p className="text-xs text-slate-400 italic">
-                {isTa ? 'வரலாற்றுப் பெயர்: ' : 'Historical Name: '}{displayTemple.historicalName}
+                {t.historicalName} {displayTemple.historicalName}
               </p>
             )}
 
@@ -92,36 +237,51 @@ export const TempleDetailModal: React.FC<TempleDetailModalProps> = ({ temple, on
                 title="Click to center and zoom map on this temple pin"
               >
                 <Crosshair className="w-4 h-4 text-indigo-400 animate-pulse" />
-                <span>
-                  📍 GPS: {gpsLabel} — ({isTa ? 'வரைபடத்தில் பார்க்க' : 'Click to Locate Pin on Map'})
-                </span>
+                <span>📍 GPS: {gpsLabel} — ({t.locateMap})</span>
               </button>
 
-              {/* Language Toggle Button */}
-              <button
-                type="button"
-                onClick={handleToggleLanguage}
-                disabled={isTranslating}
-                className={`flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-xl border transition cursor-pointer shadow-sm ${
-                  language === 'en'
-                    ? 'bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border-emerald-700/60 hover:shadow-emerald-500/20'
-                    : 'bg-amber-950/80 hover:bg-amber-900 text-amber-300 border-amber-700/60 hover:shadow-amber-500/20'
-                }`}
-                title={language === 'en' ? 'Click to translate temple details to Tamil' : 'Click to show English details'}
-              >
+              {/* Multi-Language Single-Select Combo Box */}
+              <div className="flex items-center gap-2 bg-slate-950/90 border border-slate-700/80 rounded-xl px-3 py-1.5 shadow-sm">
+                <Languages className="w-4 h-4 text-indigo-400 shrink-0" />
+                <label htmlFor="language-combo-select" className="sr-only">Choose Language</label>
+                <select
+                  id="language-combo-select"
+                  aria-label="Select Language"
+                  value={comboValue}
+                  onChange={(e) => handleLanguageChange(e.target.value as SupportedLanguage)}
+                  disabled={isTranslating}
+                  className="bg-transparent text-xs font-semibold text-white focus:outline-none cursor-pointer pr-1"
+                >
+                  {displayedLang === 'en' ? (
+                    <>
+                      <option value="ta" className="bg-slate-900 text-slate-100">தமிழ் (Tamil)</option>
+                      <option value="te" className="bg-slate-900 text-slate-100">తెలుగు (Telugu)</option>
+                      <option value="hi" className="bg-slate-900 text-slate-100">हिन्दी (Hindi)</option>
+                      <option value="en" className="bg-slate-900 text-slate-400">English (Current)</option>
+                    </>
+                  ) : (
+                    <>
+                      <option value="en" className="bg-slate-900 text-slate-100">English</option>
+                      <option value="ta" className="bg-slate-900 text-slate-100">தமிழ் (Tamil){displayedLang === 'ta' ? ' ✓' : ''}</option>
+                      <option value="te" className="bg-slate-900 text-slate-100">తెలుగు (Telugu){displayedLang === 'te' ? ' ✓' : ''}</option>
+                      <option value="hi" className="bg-slate-900 text-slate-100">हिन्दी (Hindi){displayedLang === 'hi' ? ' ✓' : ''}</option>
+                    </>
+                  )}
+                </select>
+
                 {isTranslating ? (
-                  <Loader2 className="w-4 h-4 text-emerald-400 animate-spin" />
-                ) : (
-                  <Languages className="w-4 h-4" />
+                  <Loader2 className="w-3.5 h-3.5 text-indigo-400 animate-spin" />
+                ) : displayedLang !== 'en' && (
+                  <button
+                    type="button"
+                    onClick={() => handleLanguageChange('en')}
+                    className="text-[10px] font-semibold text-indigo-300 hover:text-indigo-200 bg-indigo-950/80 px-1.5 py-0.5 rounded border border-indigo-800/60 ml-1 cursor-pointer transition"
+                    title="Switch back to English"
+                  >
+                    English
+                  </button>
                 )}
-                <span>
-                  {isTranslating
-                    ? (isTa ? 'தமிழில் மொழிபெயர்க்கப்படுகிறது...' : 'Translating to Tamil...')
-                    : language === 'en'
-                    ? 'தமிழ்'
-                    : 'English'}
-                </span>
-              </button>
+              </div>
             </div>
           </div>
 
@@ -143,9 +303,9 @@ export const TempleDetailModal: React.FC<TempleDetailModalProps> = ({ temple, on
         {/* Loading Overlay when translating */}
         {isTranslating && (
           <div className="p-8 flex flex-col items-center justify-center space-y-3 bg-slate-900/40">
-            <Loader2 className="w-8 h-8 text-emerald-400 animate-spin" />
-            <p className="text-xs font-mono text-emerald-300">
-              {isTa ? 'ஜெமினி AI மூலம் கோயிலின் அனைத்து விவரங்களும் தமிழில் மொழிபெயர்க்கப்படுகிறது...' : 'Translating all temple details to Tamil via Gemini AI...'}
+            <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
+            <p className="text-xs font-mono text-indigo-300">
+              {t.translatingMsg}
             </p>
           </div>
         )}
@@ -156,22 +316,22 @@ export const TempleDetailModal: React.FC<TempleDetailModalProps> = ({ temple, on
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-2">
                 <h3 className="text-xs font-bold font-mono text-indigo-400 uppercase tracking-wider">
-                  {isTa ? 'மூலவர் & வழிபாடுகள்' : 'Deities & Worship'}
+                  {t.deitiesWorship}
                 </h3>
-                <p><strong>{isTa ? 'மூலவர்:' : 'Moolavar:'}</strong> {displayTemple.moolavar || 'N/A'}</p>
-                <p><strong>{isTa ? 'உற்சவர்:' : 'Urchavar:'}</strong> {displayTemple.urchavar || 'N/A'}</p>
-                <p><strong>{isTa ? 'அம்மன் / தாயார்:' : 'Amman / Thayar:'}</strong> {displayTemple.ammanThayar || 'N/A'}</p>
-                <p><strong>{isTa ? 'ஆகமம் / பூஜை:' : 'Agamam / Pooja:'}</strong> {displayTemple.agamamPooja || 'N/A'}</p>
+                <p><strong>{t.moolavar}</strong> {displayTemple.moolavar || 'N/A'}</p>
+                <p><strong>{t.urchavar}</strong> {displayTemple.urchavar || 'N/A'}</p>
+                <p><strong>{t.ammanThayar}</strong> {displayTemple.ammanThayar || 'N/A'}</p>
+                <p><strong>{t.agamamPooja}</strong> {displayTemple.agamamPooja || 'N/A'}</p>
               </div>
 
               <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-2">
                 <h3 className="text-xs font-bold font-mono text-purple-400 uppercase tracking-wider">
-                  {isTa ? 'தல விருட்சம் & புனித குறியீடுகள்' : 'Sacred Symbols'}
+                  {t.sacredSymbols}
                 </h3>
-                <p><strong>{isTa ? 'தல விருட்சம்:' : 'Thala Virutcham:'}</strong> {displayTemple.thalaVirutcham || 'N/A'}</p>
-                <p><strong>{isTa ? 'தீர்த்தம்:' : 'Theertham:'}</strong> {displayTemple.theertham || 'N/A'}</p>
-                <p><strong>{isTa ? 'பாடியவர்கள்:' : 'Singers:'}</strong> {displayTemple.singers || 'N/A'}</p>
-                <p><strong>{isTa ? 'பழமை / அமைக்கப்பட்ட ஆண்டு:' : 'Old / Construction Year:'}</strong> {displayTemple.oldYear || 'N/A'}</p>
+                <p><strong>{t.thalaVirutcham}</strong> {displayTemple.thalaVirutcham || 'N/A'}</p>
+                <p><strong>{t.theertham}</strong> {displayTemple.theertham || 'N/A'}</p>
+                <p><strong>{t.singers}</strong> {displayTemple.singers || 'N/A'}</p>
+                <p><strong>{t.oldYear}</strong> {displayTemple.oldYear || 'N/A'}</p>
               </div>
             </div>
 
@@ -179,7 +339,7 @@ export const TempleDetailModal: React.FC<TempleDetailModalProps> = ({ temple, on
               <div className="bg-slate-900/40 p-4 rounded-xl border border-slate-800">
                 <h3 className="text-xs font-bold font-mono text-emerald-400 uppercase tracking-wider mb-1 flex items-center gap-1.5">
                   <Info className="w-4 h-4" />
-                  {isTa ? 'கோயில் சிறப்புகள் & முக்கியத்துவம்' : 'Speciality & Importance'}
+                  {t.speciality}
                 </h3>
                 <p className="text-xs leading-relaxed text-slate-300">{displayTemple.speciality}</p>
               </div>
@@ -189,7 +349,7 @@ export const TempleDetailModal: React.FC<TempleDetailModalProps> = ({ temple, on
               <div className="bg-slate-900/40 p-4 rounded-xl border border-slate-800">
                 <h3 className="text-xs font-bold font-mono text-amber-400 uppercase tracking-wider mb-1 flex items-center gap-1.5">
                   <Calendar className="w-4 h-4" />
-                  {isTa ? 'கோயில் வரலாறு' : 'Temple History'}
+                  {t.history}
                 </h3>
                 <p className="text-xs leading-relaxed text-slate-300">{displayTemple.history}</p>
               </div>
@@ -199,29 +359,29 @@ export const TempleDetailModal: React.FC<TempleDetailModalProps> = ({ temple, on
               <div>
                 <p className="flex items-center gap-2 text-slate-300 mb-1">
                   <Phone className="w-3.5 h-3.5 text-indigo-400" />
-                  <span><strong>{isTa ? 'தொலைபேசி:' : 'Phone:'}</strong> {displayTemple.phone || 'N/A'}</span>
+                  <span><strong>{t.phone}</strong> {displayTemple.phone || 'N/A'}</span>
                 </p>
                 <p className="flex items-center gap-2 text-slate-300 mb-1">
                   <Clock className="w-3.5 h-3.5 text-indigo-400" />
-                  <span><strong>{isTa ? 'நடை திறக்கும் நேரம்:' : 'Opening Timings:'}</strong> {displayTemple.openingTime || 'N/A'}</span>
+                  <span><strong>{t.openingTime}</strong> {displayTemple.openingTime || 'N/A'}</span>
                 </p>
                 <p className="flex items-center gap-2 text-slate-300">
                   <MapPin className="w-3.5 h-3.5 text-indigo-400" />
-                  <span><strong>{isTa ? 'முகவரி:' : 'Address:'}</strong> {displayTemple.address || displayTemple.location || 'N/A'}</span>
+                  <span><strong>{t.address}</strong> {displayTemple.address || displayTemple.location || 'N/A'}</span>
                 </p>
               </div>
               <div>
                 <p className="flex items-center gap-2 text-slate-300 mb-1">
                   <Train className="w-3.5 h-3.5 text-purple-400" />
-                  <span><strong>{isTa ? 'அருகிலுள்ள ரயில் நிலையம்:' : 'Nearest Railway:'}</strong> {displayTemple.nearByRailwayStation || 'N/A'}</span>
+                  <span><strong>{t.railway}</strong> {displayTemple.nearByRailwayStation || 'N/A'}</span>
                 </p>
                 <p className="flex items-center gap-2 text-slate-300 mb-1">
                   <Plane className="w-3.5 h-3.5 text-purple-400" />
-                  <span><strong>{isTa ? 'அருகிலுள்ள விமான நிலையம்:' : 'Nearest Airport:'}</strong> {displayTemple.nearByAirport || 'N/A'}</span>
+                  <span><strong>{t.airport}</strong> {displayTemple.nearByAirport || 'N/A'}</span>
                 </p>
                 <p className="flex items-center gap-2 text-slate-300">
                   <ShieldAlert className="w-3.5 h-3.5 text-purple-400" />
-                  <span><strong>{isTa ? 'தங்குமிடம்:' : 'Accommodation:'}</strong> {displayTemple.accommodation || 'N/A'}</span>
+                  <span><strong>{t.accommodation}</strong> {displayTemple.accommodation || 'N/A'}</span>
                 </p>
               </div>
             </div>
@@ -236,14 +396,14 @@ export const TempleDetailModal: React.FC<TempleDetailModalProps> = ({ temple, on
             className="flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 font-semibold transition"
           >
             <Crosshair className="w-4 h-4" />
-            <span>{isTa ? 'வரைபடத்தில் இருப்பிடத்தைக் காட்டு' : 'Locate Pin on Map'}</span>
+            <span>{t.locatePinFooter}</span>
           </button>
 
           <button
             onClick={onClose}
             className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs px-5 py-2 rounded-xl transition shadow-lg shadow-indigo-600/30"
           >
-            {isTa ? 'விவரங்களை மூடுக' : 'Close Details'}
+            {t.closeDetails}
           </button>
         </div>
       </div>

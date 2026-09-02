@@ -160,24 +160,61 @@ public class TempleAiService {
         return sql;
     }
 
+    private final Map<String, Temple> translationCache = new java.util.concurrent.ConcurrentHashMap<>();
+
     public Mono<Temple> translateTemple(Long id, String targetLang) {
         return Mono.fromCallable(() -> {
+            String lang = (targetLang != null && !targetLang.isBlank()) ? targetLang.toLowerCase().trim() : "en";
             String sql = "SELECT * FROM temples WHERE id = " + id;
             List<Temple> found = templeRepository.executeDynamicSql(sql);
             if (found.isEmpty()) {
                 return null;
             }
             Temple original = found.get(0);
-            return translateWithGemini(original, geminiApiKey);
+            if ("en".equals(lang)) {
+                return original;
+            }
+
+            String cacheKey = id + "_" + lang;
+            if (translationCache.containsKey(cacheKey)) {
+                return translationCache.get(cacheKey);
+            }
+
+            Temple translated = translateWithGemini(original, lang, geminiApiKey);
+            if (translated != null) {
+                translationCache.put(cacheKey, translated);
+            }
+            return translated != null ? translated : original;
         })
         .subscribeOn(Schedulers.boundedElastic());
     }
 
-    private Temple translateWithGemini(Temple original, String apiKey) {
+    private Temple translateWithGemini(Temple original, String targetLang, String apiKey) {
         try {
+            String langName;
+            String scriptInstruction;
+            switch (targetLang.toLowerCase()) {
+                case "te" -> {
+                    langName = "Telugu";
+                    scriptInstruction = "fluent native Telugu script (తెలుగు లిపి)";
+                }
+                case "hi" -> {
+                    langName = "Hindi";
+                    scriptInstruction = "fluent native Hindi / Devanagari script (हिन्दी / देवनागरी लिपि)";
+                }
+                case "ta" -> {
+                    langName = "Tamil";
+                    scriptInstruction = "fluent native Tamil script (தமிழ் எழுத்துக்கள்)";
+                }
+                default -> {
+                    langName = "Tamil";
+                    scriptInstruction = "fluent native Tamil script (தமிழ் எழுத்துக்கள்)";
+                }
+            }
+
             String prompt = String.format("""
-                You are an expert English to Tamil translator specializing in South Indian temples and culture.
-                Translate ALL descriptive text fields into fluent native Tamil script (தமிழ் எழுத்துக்கள்).
+                You are an expert English to %s translator specializing in Indian temples and culture.
+                Translate ALL descriptive text fields into %s.
 
                 Temple details to translate:
                 Name: %s
@@ -213,8 +250,10 @@ public class TempleAiService {
                 "thalaVirutcham", "theertham", "singers", "oldYear", "agamamPooja", "speciality", "history",
                 "address", "location", "openingTime", "festival", "nearByRailwayStation", "nearByAirport",
                 "accommodation", "prayers", "thanksGiving", "greatness", "features"
-                All values MUST be in Tamil script (தமிழ் எழுத்துக்கள்).
+                All values MUST be in %s.
                 """,
+                langName,
+                scriptInstruction,
                 escapeJson(original.name(), 0),
                 escapeJson(original.historicalName(), 0),
                 escapeJson(original.city(), 0),
@@ -240,13 +279,14 @@ public class TempleAiService {
                 escapeJson(original.prayers(), 0),
                 escapeJson(original.thanksGiving(), 0),
                 escapeJson(original.greatness(), 0),
-                escapeJson(original.features(), 0)
+                escapeJson(original.features(), 0),
+                scriptInstruction
             );
 
             String jsonText = callGeminiApi(prompt, true);
             return parseTranslatedTemple(original, jsonText);
         } catch (Exception e) {
-            System.err.println("Gemini Flash translation failed: " + e.getMessage());
+            System.err.println("Gemini Flash translation failed for " + targetLang + ": " + e.getMessage());
             return original;
         }
     }

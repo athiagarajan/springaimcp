@@ -33,7 +33,14 @@ export const searchTemples = async (query: string): Promise<Temple[]> => {
   return response.json();
 };
 
+const translationCache = new Map<string, Temple>();
+
 export const fetchTempleTranslation = async (id: number, targetLang: string = 'ta'): Promise<Temple> => {
+  const cacheKey = `${id}_${targetLang.toLowerCase()}`;
+  if (translationCache.has(cacheKey)) {
+    return translationCache.get(cacheKey)!;
+  }
+
   const response = await fetch(`${BASE_URL}/api/v1/temples/${id}/translate?targetLang=${encodeURIComponent(targetLang)}`, {
     headers: {
       Authorization: BASIC_AUTH_HEADER,
@@ -45,7 +52,9 @@ export const fetchTempleTranslation = async (id: number, targetLang: string = 't
     throw new Error('Failed to translate temple details');
   }
 
-  return response.json();
+  const result: Temple = await response.json();
+  translationCache.set(cacheKey, result);
+  return result;
 };
 
 export const streamDynamicQuery = (
