@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.springaimcp.model.Temple;
 import com.springaimcp.model.TempleImage;
 import com.springaimcp.repository.TempleRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
@@ -21,6 +23,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class TempleImageService {
+
+    private static final Logger log = LoggerFactory.getLogger(TempleImageService.class);
 
     private final TempleRepository templeRepository;
     private final ObjectMapper objectMapper;
@@ -52,14 +56,15 @@ public class TempleImageService {
             Temple temple = templeOpt.get();
             List<TempleImage> images = fetchImagesFromWeb(temple);
 
-            if (images.isEmpty()) {
-                images = getRepresentativeImages(temple);
+            if (!images.isEmpty()) {
+                log.info("Found {} authentic photographs for temple ID {} ('{}')", images.size(), id, temple.name());
+                imageCache.put(id, images);
+                return images;
             }
 
-            if (!images.isEmpty()) {
-                imageCache.put(id, images);
-            }
-            return images;
+            log.info("No web images found for temple ID {} ('{}'), providing cultural architectural representative visual", id, temple.name());
+            // Do NOT cache fallback images in imageCache so subsequent retries can find real images
+            return getRepresentativeImages(temple);
         }).subscribeOn(Schedulers.boundedElastic());
     }
 
@@ -67,41 +72,35 @@ public class TempleImageService {
         List<TempleImage> results = new ArrayList<>();
         Set<String> seenUrls = new HashSet<>();
 
-        // Generate query variations
-        List<String> searchCandidates = new ArrayList<>();
-        if (temple.name() != null && !temple.name().isBlank()) {
-            String cleanName = temple.name().replaceAll("(?i)^sri\\s+", "").trim();
-            if (temple.city() != null && !temple.city().isBlank()) {
-                searchCandidates.add(cleanName + " " + temple.city());
-            }
-            searchCandidates.add(cleanName + " Temple");
-            searchCandidates.add(cleanName);
-        }
-        if (temple.historicalName() != null && !temple.historicalName().isBlank()) {
-            searchCandidates.add(temple.historicalName().trim() + " Temple");
-        }
+        List<String> queries = generateSearchQueries(temple);
+        log.debug("Searching temple images for ID {} with query candidates: {}", temple.id(), queries);
 
-        String foundTitle = null;
-        for (String q : searchCandidates) {
-            foundTitle = searchWikipediaTitle(q);
-            if (foundTitle != null) {
-                break;
-            }
-        }
-
-        if (foundTitle != null) {
-            // 1. Fetch main page image
-            TempleImage mainImg = fetchWikipediaSummaryImage(foundTitle);
-            if (mainImg != null && seenUrls.add(mainImg.url())) {
-                results.add(mainImg);
-            }
-
-            // 2. Fetch up to 3 additional gallery images from Wikimedia Commons
-            List<TempleImage> commonsImgs = fetchWikimediaCommonsGallery(foundTitle);
+        // AVENUE 1: Direct Wikimedia Commons Search (Highest Authenticity & Quantity)
+        for (String q : queries) {
+            List<TempleImage> commonsImgs = searchWikimediaCommonsDirect(q);
             for (TempleImage img : commonsImgs) {
-                if (results.size() >= 4) break;
                 if (seenUrls.add(img.url())) {
                     results.add(img);
+                }
+                if (results.size() >= 4) break;
+            }
+            if (results.size() >= 3) {
+                return results;
+            }
+        }
+
+        // AVENUE 2: Wikipedia Unified PageImages Search
+        if (results.size() < 3) {
+            for (String q : queries) {
+                List<TempleImage> wikiImgs = searchWikipediaUnified(q);
+                for (TempleImage img : wikiImgs) {
+                    if (seenUrls.add(img.url())) {
+                        results.add(img);
+                    }
+                    if (results.size() >= 4) break;
+                }
+                if (results.size() >= 2) {
+                    break;
                 }
             }
         }
@@ -109,77 +108,60 @@ public class TempleImageService {
         return results;
     }
 
-    private String searchWikipediaTitle(String query) {
+    private List<String> generateSearchQueries(Temple temple) {
+        List<String> queries = new ArrayList<>();
+        String rawName = temple.name() != null ? temple.name() : "";
+        String clean = rawName.replaceAll("(?i)^sri\\s+", "")
+                              .replaceAll("(?i)\\btemple\\b", "")
+                              .trim();
+        String city = temple.city() != null ? temple.city().trim() : "";
+        String moolavar = temple.moolavar() != null ? temple.moolavar().trim() : "";
+        String historical = temple.historicalName() != null ? temple.historicalName().trim() : "";
+
+        if (!clean.isBlank()) {
+            if (!city.isBlank() && !clean.toLowerCase().contains(city.toLowerCase())) {
+                queries.add(clean + " " + city + " Temple");
+            } else {
+                queries.add(clean + " Temple");
+            }
+        }
+
+        if (!moolavar.isBlank()) {
+            String mClean = moolavar.replaceAll("(?i)\\b(lord|sri|swami|swamy)\\b", "").trim();
+            String firstM = mClean.split("[,;/]")[0].trim();
+            if (!firstM.isBlank()) {
+                if (!city.isBlank()) {
+                    queries.add(city + " " + firstM + " Temple");
+                    queries.add(firstM + " Temple " + city);
+                }
+                queries.add(firstM + " Temple");
+            }
+        }
+
+        if (!historical.isBlank()) {
+            queries.add(historical + " Temple");
+            if (!city.isBlank()) {
+                queries.add(historical + " " + city);
+            }
+        }
+
+        if (!clean.isBlank()) {
+            queries.add(clean);
+        }
+
+        return queries;
+    }
+
+    private List<TempleImage> searchWikimediaCommonsDirect(String query) {
+        List<TempleImage> list = new ArrayList<>();
         try {
             String encoded = URLEncoder.encode(query, StandardCharsets.UTF_8);
-            String url = "https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=" + encoded + "&srlimit=2&format=json";
+            String url = "https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch="
+                    + encoded + "&gsrnamespace=6&gsrlimit=6&prop=imageinfo&iiprop=url&iiurlwidth=960&format=json";
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(url))
                     .header("User-Agent", USER_AGENT)
-                    .timeout(Duration.ofSeconds(5))
-                    .GET()
-                    .build();
-
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            if (response.statusCode() == 200) {
-                JsonNode root = objectMapper.readTree(response.body());
-                JsonNode searchArr = root.path("query").path("search");
-                if (searchArr.isArray() && !searchArr.isEmpty()) {
-                    return searchArr.get(0).path("title").asText(null);
-                }
-            }
-        } catch (Exception e) {
-            // Non-fatal, try next candidate
-        }
-        return null;
-    }
-
-    private TempleImage fetchWikipediaSummaryImage(String title) {
-        try {
-            String encoded = URLEncoder.encode(title.replace(" ", "_"), StandardCharsets.UTF_8);
-            String url = "https://en.wikipedia.org/api/rest_v1/page/summary/" + encoded;
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(url))
-                    .header("User-Agent", USER_AGENT)
-                    .timeout(Duration.ofSeconds(5))
-                    .GET()
-                    .build();
-
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            if (response.statusCode() == 200) {
-                JsonNode root = objectMapper.readTree(response.body());
-                String imgUrl = null;
-                if (root.has("originalimage") && root.get("originalimage").has("source")) {
-                    imgUrl = root.get("originalimage").get("source").asText();
-                } else if (root.has("thumbnail") && root.get("thumbnail").has("source")) {
-                    imgUrl = root.get("thumbnail").get("source").asText();
-                }
-
-                if (imgUrl != null && !imgUrl.isBlank()) {
-                    String desc = root.path("description").asText("Main Temple Architecture");
-                    return new TempleImage(
-                            imgUrl,
-                            root.path("title").asText(title),
-                            desc,
-                            "Wikipedia"
-                    );
-                }
-            }
-        } catch (Exception e) {
-            // Non-fatal
-        }
-        return null;
-    }
-
-    private List<TempleImage> fetchWikimediaCommonsGallery(String title) {
-        List<TempleImage> gallery = new ArrayList<>();
-        try {
-            String encoded = URLEncoder.encode(title, StandardCharsets.UTF_8);
-            String url = "https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=" + encoded + "&gsrnamespace=6&gsrlimit=6&prop=imageinfo&iiprop=url&format=json";
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(url))
-                    .header("User-Agent", USER_AGENT)
-                    .timeout(Duration.ofSeconds(5))
+                    .timeout(Duration.ofSeconds(6))
                     .GET()
                     .build();
 
@@ -192,35 +174,89 @@ public class TempleImageService {
                         JsonNode page = entry.getValue();
                         JsonNode imgInfo = page.path("imageinfo");
                         if (imgInfo.isArray() && !imgInfo.isEmpty()) {
-                            String u = imgInfo.get(0).path("url").asText("");
+                            String u = imgInfo.get(0).path("thumburl").asText("");
+                            if (u.isBlank()) {
+                                u = imgInfo.get(0).path("url").asText("");
+                            }
                             String lower = u.toLowerCase();
-                            if (lower.endsWith(".jpg") || lower.endsWith(".jpeg") || lower.endsWith(".png")) {
-                                String cleanTitle = page.path("title").asText("")
+                            if ((lower.endsWith(".jpg") || lower.endsWith(".jpeg") || lower.endsWith(".png") || lower.contains(".jpg?") || lower.contains(".png?"))
+                                    && !lower.endsWith(".pdf") && !lower.contains(".pdf?")) {
+                                String title = page.path("title").asText("")
                                         .replace("File:", "")
                                         .replaceAll("(?i)\\.(jpg|jpeg|png)", "")
-                                        .replace("_", " ");
-                                gallery.add(new TempleImage(
+                                        .replaceAll("\\(.*?\\)", "")
+                                        .replace("_", " ")
+                                        .trim();
+                                list.add(new TempleImage(
                                         u,
-                                        cleanTitle,
-                                        "Architectural & Sculptural Heritage View",
+                                        title.isBlank() ? "Temple Architectural Photograph" : title,
+                                        "Temple Architectural Photograph",
                                         "Wikimedia Commons"
                                 ));
                             }
                         }
                     });
                 }
+            } else {
+                log.warn("Commons search for '{}' returned HTTP {}", query, response.statusCode());
             }
         } catch (Exception e) {
-            // Non-fatal
+            log.warn("Commons search error for '{}': {}", query, e.getMessage());
         }
-        return gallery;
+        return list;
+    }
+
+    private List<TempleImage> searchWikipediaUnified(String query) {
+        List<TempleImage> list = new ArrayList<>();
+        try {
+            String encoded = URLEncoder.encode(query, StandardCharsets.UTF_8);
+            String url = "https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch="
+                    + encoded + "&gsrlimit=3&prop=pageimages|pageterms&pithumbsize=960&format=json";
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .header("User-Agent", USER_AGENT)
+                    .timeout(Duration.ofSeconds(6))
+                    .GET()
+                    .build();
+
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() == 200) {
+                JsonNode root = objectMapper.readTree(response.body());
+                JsonNode pages = root.path("query").path("pages");
+                if (pages.isObject()) {
+                    pages.fields().forEachRemaining(entry -> {
+                        JsonNode p = entry.getValue();
+                        String thumb = p.path("thumbnail").path("source").asText(null);
+                        if (thumb != null && !thumb.isBlank()) {
+                            String title = p.path("title").asText("Temple View");
+                            String desc = "Temple Architectural Heritage";
+                            JsonNode terms = p.path("terms").path("description");
+                            if (terms.isArray() && !terms.isEmpty()) {
+                                desc = terms.get(0).asText(desc);
+                            }
+                            list.add(new TempleImage(
+                                    thumb,
+                                    title,
+                                    desc,
+                                    "Wikipedia"
+                            ));
+                        }
+                    });
+                }
+            } else {
+                log.warn("Wikipedia search for '{}' returned HTTP {}", query, response.statusCode());
+            }
+        } catch (Exception e) {
+            log.warn("Wikipedia unified search error for '{}': {}", query, e.getMessage());
+        }
+        return list;
     }
 
     private List<TempleImage> getRepresentativeImages(Temple temple) {
         List<TempleImage> list = new ArrayList<>();
         String moolavar = (temple.moolavar() != null) ? temple.moolavar().toLowerCase() : "";
 
-        if (moolavar.contains("shiva") || moolavar.contains("ekambareswarar") || moolavar.contains("lingam")) {
+        if (moolavar.contains("shiva") || moolavar.contains("ekambareswarar") || moolavar.contains("lingam") || moolavar.contains("nataraj")) {
             list.add(new TempleImage(
                     "https://upload.wikimedia.org/wikipedia/commons/thumb/0/06/Ekambareswarar5.jpg/960px-Ekambareswarar5.jpg",
                     "Dravidian Rajagopuram & Temple Complex",
