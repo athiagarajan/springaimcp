@@ -36,3 +36,10 @@ export interface StreamQueryResponse {
   chunk: string;
   isDone: boolean;
 }
+
+export interface TempleImage {
+  url: string;
+  title: string;
+  description: string;
+  source: string;
+}

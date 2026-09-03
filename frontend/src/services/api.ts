@@ -1,7 +1,32 @@
-import { Temple } from '../types/temple';
+import { Temple, TempleImage } from '../types/temple';
 
 const BASIC_AUTH_HEADER = 'Basic ' + btoa('admin:adminpassword');
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+
+const imageCache = new Map<number, TempleImage[]>();
+
+export const fetchTempleImages = async (id: number): Promise<TempleImage[]> => {
+  if (imageCache.has(id)) {
+    return imageCache.get(id)!;
+  }
+
+  const response = await fetch(`${BASE_URL}/api/v1/temples/${id}/images`, {
+    headers: {
+      Authorization: BASIC_AUTH_HEADER,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch temple images');
+  }
+
+  const result: TempleImage[] = await response.json();
+  if (result && result.length > 0) {
+    imageCache.set(id, result);
+  }
+  return result;
+};
 
 export const fetchAllTemples = async (): Promise<Temple[]> => {
   const response = await fetch(`${BASE_URL}/api/v1/temples`, {

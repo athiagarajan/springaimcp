@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Temple } from '../types/temple';
-import { fetchTempleTranslation } from '../services/api';
-import { X, MapPin, Calendar, Phone, Clock, Train, Plane, Info, ShieldAlert, Crosshair, Languages, Loader2, ChevronDown, Check, Sparkles, HeartHandshake, BookOpen } from 'lucide-react';
+import { Temple, TempleImage } from '../types/temple';
+import { fetchTempleTranslation, fetchTempleImages } from '../services/api';
+import { X, MapPin, Calendar, Phone, Clock, Train, Plane, Info, ShieldAlert, Crosshair, Languages, Loader2, ChevronDown, Check, Sparkles, HeartHandshake, BookOpen, ChevronLeft, ChevronRight, Maximize2, Camera } from 'lucide-react';
 
 export type SupportedLanguage = 'en' | 'ta' | 'te' | 'hi';
 
@@ -192,15 +192,38 @@ export const TempleDetailModal: React.FC<TempleDetailModalProps> = ({ temple, on
   const [isTranslating, setIsTranslating] = useState<boolean>(false);
   const [translationError, setTranslationError] = useState<string | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
+  const [images, setImages] = useState<TempleImage[]>([]);
+  const [isLoadingImages, setIsLoadingImages] = useState<boolean>(false);
+  const [currentImageIdx, setCurrentImageIdx] = useState<number>(0);
+  const [isLightboxOpen, setIsLightboxOpen] = useState<boolean>(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // When temple changes, reset to default English display
+  // When temple changes, reset to default English display and fetch images
   useEffect(() => {
     setDisplayedLang('en');
     setTranslationCache({});
     setIsTranslating(false);
     setTranslationError(null);
     setIsDropdownOpen(false);
+    setCurrentImageIdx(0);
+    setIsLightboxOpen(false);
+
+    if (temple?.id) {
+      setIsLoadingImages(true);
+      fetchTempleImages(temple.id)
+        .then((imgs) => {
+          setImages(imgs || []);
+        })
+        .catch((err) => {
+          console.error('Failed to load temple images:', err);
+          setImages([]);
+        })
+        .finally(() => {
+          setIsLoadingImages(false);
+        });
+    } else {
+      setImages([]);
+    }
   }, [temple?.id]);
 
   // Click outside to close dropdown
@@ -432,6 +455,112 @@ export const TempleDetailModal: React.FC<TempleDetailModalProps> = ({ temple, on
         {/* Modal Body Content */}
         {!isTranslating && (
           <div className="p-6 overflow-y-auto space-y-6 text-sm text-slate-200">
+            {/* Authentic Temple Photographs Carousel */}
+            {isLoadingImages ? (
+              <div className="h-56 bg-slate-900/60 rounded-2xl border border-slate-800 animate-pulse flex flex-col items-center justify-center text-xs text-slate-400 font-mono space-y-2">
+                <Camera className="w-6 h-6 text-indigo-400 animate-bounce" />
+                <span>Fetching authentic temple photographs via Web Agent...</span>
+              </div>
+            ) : images.length > 0 ? (
+              <div className="relative rounded-2xl overflow-hidden border border-slate-800 bg-slate-950 group">
+                <div
+                  className="h-64 sm:h-72 w-full relative cursor-pointer overflow-hidden"
+                  onClick={() => setIsLightboxOpen(true)}
+                  title="Click to view full-screen photograph"
+                >
+                  <img
+                    src={images[currentImageIdx].url}
+                    alt={images[currentImageIdx].title}
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    onError={(e) => {
+                      (e.target as HTMLElement).style.display = 'none';
+                    }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent pointer-events-none" />
+
+                  <div className="absolute top-3 left-3 flex items-center gap-2">
+                    <span className="flex items-center gap-1.5 text-[11px] font-mono font-semibold bg-black/60 backdrop-blur-md text-emerald-300 border border-emerald-500/30 px-2.5 py-1 rounded-full shadow-lg">
+                      <Camera className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>{images[currentImageIdx].source}</span>
+                    </span>
+                  </div>
+
+                  <div className="absolute top-3 right-3 flex items-center gap-1.5">
+                    <span className="text-[11px] font-mono bg-black/60 backdrop-blur-md text-slate-300 border border-slate-700 px-2.5 py-1 rounded-full shadow-lg">
+                      {currentImageIdx + 1} / {images.length}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsLightboxOpen(true);
+                      }}
+                      className="p-1.5 bg-black/60 hover:bg-black/80 backdrop-blur-md text-slate-300 hover:text-white rounded-full border border-slate-700 transition"
+                      title="Fullscreen View"
+                    >
+                      <Maximize2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  <div className="absolute bottom-3 left-3 right-3 pointer-events-none">
+                    <h4 className="text-sm font-bold text-white drop-shadow-md">
+                      {images[currentImageIdx].title}
+                    </h4>
+                    {images[currentImageIdx].description && (
+                      <p className="text-xs text-slate-300 line-clamp-1 drop-shadow">
+                        {images[currentImageIdx].description}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {images.length > 1 && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setCurrentImageIdx((prev) => (prev === 0 ? images.length - 1 : prev - 1));
+                      }}
+                      aria-label="Previous photograph"
+                      className="absolute left-2.5 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/60 hover:bg-black/80 text-white backdrop-blur-md border border-slate-700 shadow-xl opacity-80 hover:opacity-100 transition cursor-pointer"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setCurrentImageIdx((prev) => (prev === images.length - 1 ? 0 : prev + 1));
+                      }}
+                      aria-label="Next photograph"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/60 hover:bg-black/80 text-white backdrop-blur-md border border-slate-700 shadow-xl opacity-80 hover:opacity-100 transition cursor-pointer"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+
+                    <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 flex items-center gap-1.5 z-10">
+                      {images.map((_, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setCurrentImageIdx(idx);
+                          }}
+                          className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                            currentImageIdx === idx
+                              ? 'w-5 bg-indigo-400'
+                              : 'w-1.5 bg-slate-500/60 hover:bg-slate-300'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            ) : null}
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-2">
                 <h3 className="text-xs font-bold font-mono text-indigo-400 uppercase tracking-wider">
@@ -584,6 +713,64 @@ export const TempleDetailModal: React.FC<TempleDetailModalProps> = ({ temple, on
           </button>
         </div>
       </div>
+
+      {/* Fullscreen Lightbox Modal */}
+      {isLightboxOpen && images[currentImageIdx] && (
+        <div
+          className="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex flex-col items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={() => setIsLightboxOpen(false)}
+        >
+          <button
+            type="button"
+            onClick={() => setIsLightboxOpen(false)}
+            className="absolute top-5 right-5 p-2.5 bg-slate-800/80 hover:bg-slate-700 text-white rounded-full transition cursor-pointer"
+            title="Close Fullscreen View"
+          >
+            <X className="w-6 h-6" />
+          </button>
+
+          <div
+            className="relative max-w-5xl max-h-[85vh] flex flex-col items-center justify-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={images[currentImageIdx].url}
+              alt={images[currentImageIdx].title}
+              className="max-w-full max-h-[75vh] object-contain rounded-xl shadow-2xl border border-slate-800"
+            />
+            <div className="mt-3 text-center text-slate-200">
+              <h3 className="text-base font-bold text-white">{images[currentImageIdx].title}</h3>
+              {images[currentImageIdx].description && (
+                <p className="text-xs text-slate-400 mt-0.5 max-w-2xl">{images[currentImageIdx].description}</p>
+              )}
+              <span className="inline-block mt-1 text-[11px] font-mono text-emerald-400">
+                Source: {images[currentImageIdx].source} ({currentImageIdx + 1} of {images.length})
+              </span>
+            </div>
+
+            {images.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setCurrentImageIdx((prev) => (prev === 0 ? images.length - 1 : prev - 1))}
+                  className="absolute left-[-50px] top-1/2 -translate-y-1/2 p-3 bg-slate-800/80 hover:bg-slate-700 text-white rounded-full transition hidden sm:flex items-center justify-center cursor-pointer"
+                  title="Previous photograph"
+                >
+                  <ChevronLeft className="w-6 h-6" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCurrentImageIdx((prev) => (prev === images.length - 1 ? 0 : prev + 1))}
+                  className="absolute right-[-50px] top-1/2 -translate-y-1/2 p-3 bg-slate-800/80 hover:bg-slate-700 text-white rounded-full transition hidden sm:flex items-center justify-center cursor-pointer"
+                  title="Next photograph"
+                >
+                  <ChevronRight className="w-6 h-6" />
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

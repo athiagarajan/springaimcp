@@ -18,9 +18,11 @@ import java.util.List;
 public class TempleRestController {
 
     private final TempleAiService templeAiService;
+    private final com.springaimcp.service.TempleImageService templeImageService;
 
-    public TempleRestController(TempleAiService templeAiService) {
+    public TempleRestController(TempleAiService templeAiService, com.springaimcp.service.TempleImageService templeImageService) {
         this.templeAiService = templeAiService;
+        this.templeImageService = templeImageService;
     }
 
     @Operation(summary = "Get all temple records", description = "Returns all 96 temples from templeinfo database")
@@ -39,5 +41,11 @@ public class TempleRestController {
     @GetMapping("/{id}/translate")
     public Mono<Temple> translateTemple(@PathVariable Long id, @RequestParam(defaultValue = "ta") String targetLang) {
         return templeAiService.translateTemple(id, targetLang);
+    }
+
+    @Operation(summary = "Get authentic photographs of temple via Web & AI Agent", description = "Fetches authentic high-resolution images from Wikipedia and Wikimedia Commons")
+    @GetMapping("/{id}/images")
+    public Mono<List<com.springaimcp.model.TempleImage>> getTempleImages(@PathVariable Long id) {
+        return templeImageService.getImagesForTemple(id);
     }
 }

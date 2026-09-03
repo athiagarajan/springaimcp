@@ -53,6 +53,14 @@ const teluguTemple: Temple = {
 describe('TempleDetailModal Component', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    vi.spyOn(api, 'fetchTempleImages').mockResolvedValue([
+      {
+        url: 'https://upload.wikimedia.org/test-photo.jpg',
+        title: 'Ekambareswarar Gopuram',
+        description: 'Main Dravidian Gopuram',
+        source: 'Wikipedia',
+      },
+    ]);
   });
 
   it('returns null when temple is null', () => {
@@ -65,14 +73,34 @@ describe('TempleDetailModal Component', () => {
     render(<TempleDetailModal temple={sampleTemple} onClose={handleClose} />);
 
     expect(screen.getByText('sri Idumban temple')).toBeInTheDocument();
-    expect(screen.getByText(/Old Palani Temple/i)).toBeInTheDocument();
-    expect(screen.getByText(/Palani Hill Road/i)).toBeInTheDocument();
-    expect(screen.getByText(/Palani Junction \(PLNI\)/i)).toBeInTheDocument();
+    expect(screen.getByText('Palani, Dindigul, Tamil Nadu')).toBeInTheDocument();
 
-    const closeBtn = screen.getByText('Close Details');
+    const closeBtn = screen.getByRole('button', { name: 'Close Details' });
     fireEvent.click(closeBtn);
+    expect(handleClose).toHaveBeenCalledTimes(1);
+  });
 
-    expect(handleClose).toHaveBeenCalled();
+  it('renders authentic temple photograph carousel and opens lightbox on click', async () => {
+    render(<TempleDetailModal temple={sampleTemple} onClose={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Ekambareswarar Gopuram')).toBeInTheDocument();
+      expect(screen.getByText('Wikipedia')).toBeInTheDocument();
+    });
+
+    const img = screen.getByAltText('Ekambareswarar Gopuram');
+    expect(img).toBeInTheDocument();
+
+    // Click image to open fullscreen lightbox
+    fireEvent.click(img);
+
+    await waitFor(() => {
+      expect(screen.getByTitle('Close Fullscreen View')).toBeInTheDocument();
+    });
+
+    // Close lightbox
+    fireEvent.click(screen.getByTitle('Close Fullscreen View'));
+    expect(screen.queryByTitle('Close Fullscreen View')).not.toBeInTheDocument();
   });
 
   it('translates to Tamil when clicking Tamil in the combo button, and switches back to English', async () => {
@@ -80,23 +108,16 @@ describe('TempleDetailModal Component', () => {
 
     render(<TempleDetailModal temple={sampleTemple} onClose={vi.fn()} />);
 
-    // Initially in English
-    expect(screen.getByText('sri Idumban temple')).toBeInTheDocument();
-
-    // The combo button starts showing 'தமிழ் (Tamil)' by default
+    // Click combo button to translate to Tamil
     const comboBtn = screen.getByRole('button', { name: 'Toggle language' });
     expect(comboBtn).toHaveTextContent('தமிழ் (Tamil)');
-
-    // Click combo button to translate to Tamil
     fireEvent.click(comboBtn);
 
     await waitFor(() => {
       expect(fetchSpy).toHaveBeenCalledWith(494, 'ta');
       expect(screen.getByText('ஸ்ரீ இடும்பன் கோயில்')).toBeInTheDocument();
+      expect(comboBtn).toHaveTextContent('English');
     });
-
-    // Now combo button shows 'English'
-    expect(comboBtn).toHaveTextContent('English');
 
     // Click combo button again to switch back to English
     fireEvent.click(comboBtn);

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { fetchAllTemples, streamDynamicQuery } from '../services/api';
+import { fetchAllTemples, fetchTempleImages, streamDynamicQuery } from '../services/api';
 
 describe('API Services', () => {
   beforeEach(() => {
@@ -23,6 +23,22 @@ describe('API Services', () => {
     } as any);
 
     await expect(fetchAllTemples()).rejects.toThrow('Failed to fetch temples');
+  });
+
+  it('fetchTempleImages fetches and caches temple image records', async () => {
+    const mockImages = [{ url: 'https://example.com/img.jpg', title: 'Gopuram', description: 'desc', source: 'Wikipedia' }];
+    (globalThis as any).fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => mockImages,
+    } as any);
+
+    const result1 = await fetchTempleImages(494);
+    expect(result1).toEqual(mockImages);
+
+    // Call again to verify cache hit without extra network call
+    const result2 = await fetchTempleImages(494);
+    expect(result2).toEqual(mockImages);
+    expect((globalThis as any).fetch).toHaveBeenCalledTimes(1);
   });
 
   it('streamDynamicQuery processes chunk events', () => {

@@ -35,6 +35,7 @@ vi.mock('../services/api', () => ({
     onChunk('Streaming data...');
     onComplete();
   }),
+  fetchTempleImages: vi.fn().mockResolvedValue([]),
 }));
 
 describe('App Component', () => {
