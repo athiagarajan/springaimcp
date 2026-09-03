@@ -13,6 +13,7 @@ interface TempleMapProps {
   selectedTemple?: Temple | null;
   onSelectTemple?: (temple: Temple) => void;
   onAddTemple?: (temple: Temple) => void;
+  isExpanded?: boolean;
 }
 
 const customIcon = new L.Icon({
@@ -39,17 +40,51 @@ const DISTRICT_COORDS: Record<string, [number, number]> = {
 const MapRecenter: React.FC<{
   selectedTemple?: Temple | null;
   mapItems: Array<{ temple: Temple; lat: number; lng: number }>;
-}> = ({ selectedTemple, mapItems }) => {
+  isExpanded?: boolean;
+}> = ({ selectedTemple, mapItems, isExpanded }) => {
   const map = useMap();
 
+  // Handle immediate and delayed invalidation during CSS grid / flex width transitions
+  useEffect(() => {
+    map.invalidateSize();
+    const t1 = setTimeout(() => map.invalidateSize(), 100);
+    const t2 = setTimeout(() => map.invalidateSize(), 250);
+    const t3 = setTimeout(() => map.invalidateSize(), 400);
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+    };
+  }, [map, isExpanded]);
+
+  // Handle dynamic container resize via ResizeObserver
+  useEffect(() => {
+    const container = map.getContainer();
+    if (!container || typeof ResizeObserver === 'undefined') return;
+
+    const observer = new ResizeObserver(() => {
+      map.invalidateSize();
+    });
+
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [map]);
+
+  // Recenter or fit bounds
   useEffect(() => {
     if (selectedTemple) {
       const match = mapItems.find(item => item.temple.id === selectedTemple.id);
       if (match) {
         map.flyTo([match.lat, match.lng], 14, { duration: 1.2 });
       }
+    } else if (mapItems.length > 0) {
+      const bounds = L.latLngBounds(mapItems.map(item => [item.lat, item.lng]));
+      if (bounds.isValid()) {
+        map.fitBounds(bounds, { padding: [35, 35], maxZoom: 10 });
+      }
     }
-  }, [selectedTemple, mapItems, map]);
+  }, [selectedTemple, mapItems, map, isExpanded]);
 
   return null;
 };
@@ -256,7 +291,7 @@ const DraggableTempleMarker: React.FC<{
   );
 };
 
-export const TempleMap: React.FC<TempleMapProps> = ({ temples, selectedTemple, onSelectTemple, onAddTemple }) => {
+export const TempleMap: React.FC<TempleMapProps> = ({ temples, selectedTemple, onSelectTemple, onAddTemple, isExpanded }) => {
   const [enableClustering, setEnableClustering] = useState<boolean>(true);
 
   // 1. Initial coordinates assignment for each temple
@@ -298,9 +333,7 @@ export const TempleMap: React.FC<TempleMapProps> = ({ temples, selectedTemple, o
     return item;
   });
   
-  const defaultCenter: [number, number] = mapItems.length > 0 
-    ? [mapItems[0].lat, mapItems[0].lng] 
-    : [10.7905, 78.7047];
+  const defaultCenter: [number, number] = [10.9, 78.5];
 
   const renderMarkers = () =>
     mapItems.map(({ temple, lat, lng }) => (
@@ -345,14 +378,14 @@ export const TempleMap: React.FC<TempleMapProps> = ({ temples, selectedTemple, o
         </div>
       </div>
 
-      <div className="flex-1 rounded-xl overflow-hidden border border-slate-800 z-10 min-h-[300px]">
+      <div className="flex-1 rounded-xl overflow-hidden border border-slate-800 z-10 min-h-[300px] w-full">
         {mapItems.length > 0 ? (
           <MapContainer center={defaultCenter} zoom={7} scrollWheelZoom={true} className="w-full h-full min-h-[320px]">
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
-            <MapRecenter selectedTemple={selectedTemple} mapItems={mapItems} />
+            <MapRecenter selectedTemple={selectedTemple} mapItems={mapItems} isExpanded={isExpanded} />
 
             {enableClustering ? (
               <MarkerClusterGroup

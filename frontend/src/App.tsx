@@ -121,6 +121,7 @@ export const App: React.FC = () => {
             selectedTemple={selectedTemple}
             onSelectTemple={(t) => setSelectedTemple(t)}
             onAddTemple={handleAddTempleToRecords}
+            isExpanded={!showStreamLog}
           />
         </div>
 

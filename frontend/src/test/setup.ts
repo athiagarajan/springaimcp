@@ -14,5 +14,13 @@ class MockEventSource {
 }
 
 (globalThis as any).EventSource = MockEventSource;
+
+class MockResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+(globalThis as any).ResizeObserver = MockResizeObserver;
+
 window.scrollTo = vi.fn();
 Element.prototype.scrollIntoView = vi.fn();
