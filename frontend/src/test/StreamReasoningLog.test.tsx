@@ -26,4 +26,12 @@ describe('StreamReasoningLog Component', () => {
     fireEvent.click(copyBtn);
     expect(screen.getByText(/Copied/i)).toBeInTheDocument();
   });
+
+  it('triggers onClose when Hide button is clicked', () => {
+    const handleClose = vi.fn();
+    render(<StreamReasoningLog streamContent="Test" isStreaming={false} onClose={handleClose} />);
+    const hideBtn = screen.getByRole('button', { name: /Hide/i });
+    fireEvent.click(hideBtn);
+    expect(handleClose).toHaveBeenCalledTimes(1);
+  });
 });

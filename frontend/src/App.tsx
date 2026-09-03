@@ -16,6 +16,7 @@ export const App: React.FC = () => {
   const [streamLog, setStreamLog] = useState<string>('');
   const [isStreaming, setIsStreaming] = useState<boolean>(false);
   const [isLoadingTemples, setIsLoadingTemples] = useState<boolean>(true);
+  const [showStreamLog, setShowStreamLog] = useState<boolean>(false);
 
   useEffect(() => {
     loadInitialTemples();
@@ -97,10 +98,24 @@ export const App: React.FC = () => {
       <Header />
 
       <main className="flex-1 max-w-7xl w-full mx-auto p-6 space-y-6">
-        <PromptBar onSearch={handleSearch} onReset={handleReset} isLoading={isStreaming} />
+        <PromptBar
+          onSearch={handleSearch}
+          onReset={handleReset}
+          isLoading={isStreaming}
+          showStreamLog={showStreamLog}
+          onToggleStreamLog={() => setShowStreamLog((prev) => !prev)}
+        />
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[420px]">
-          <StreamReasoningLog streamContent={streamLog} isStreaming={isStreaming} />
+        <div className={`grid gap-6 h-[420px] transition-all duration-300 ${
+          showStreamLog ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'
+        }`}>
+          {showStreamLog && (
+            <StreamReasoningLog
+              streamContent={streamLog}
+              isStreaming={isStreaming}
+              onClose={() => setShowStreamLog(false)}
+            />
+          )}
           <TempleMap
             temples={mapTemples}
             selectedTemple={selectedTemple}

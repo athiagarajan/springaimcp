@@ -1,12 +1,13 @@
 import React, { useEffect, useRef } from 'react';
-import { Terminal, Copy, Check, Activity } from 'lucide-react';
+import { Terminal, Copy, Check, Activity, X } from 'lucide-react';
 
 interface StreamReasoningLogProps {
   streamContent: string;
   isStreaming: boolean;
+  onClose?: () => void;
 }
 
-export const StreamReasoningLog: React.FC<StreamReasoningLogProps> = ({ streamContent, isStreaming }) => {
+export const StreamReasoningLog: React.FC<StreamReasoningLogProps> = ({ streamContent, isStreaming, onClose }) => {
   const [copied, setCopied] = React.useState(false);
   const logEndRef = useRef<HTMLDivElement>(null);
 
@@ -36,15 +37,27 @@ export const StreamReasoningLog: React.FC<StreamReasoningLogProps> = ({ streamCo
           )}
         </div>
 
-        {streamContent && (
-          <button
-            onClick={handleCopy}
-            className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 transition bg-slate-800/80 px-2.5 py-1 rounded-md border border-slate-700"
-          >
-            {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-            <span>{copied ? 'Copied' : 'Copy Log'}</span>
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {streamContent && (
+            <button
+              onClick={handleCopy}
+              className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 transition bg-slate-800/80 px-2.5 py-1 rounded-md border border-slate-700"
+            >
+              {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+              <span>{copied ? 'Copied' : 'Copy Log'}</span>
+            </button>
+          )}
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="flex items-center gap-1 text-xs text-slate-400 hover:text-rose-300 transition bg-slate-800/80 hover:bg-rose-950/40 px-2 py-1 rounded-md border border-slate-700 hover:border-rose-500/40"
+              title="Hide streaming reasoning log"
+            >
+              <X className="w-3.5 h-3.5" />
+              <span>Hide</span>
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto custom-scrollbar max-h-[320px] min-h-[320px] font-mono text-xs text-slate-300 leading-relaxed bg-slate-950/80 rounded-xl p-4 border border-slate-900 shadow-inner">

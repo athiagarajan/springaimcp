@@ -51,4 +51,38 @@ describe('PromptBar Component', () => {
 
     expect(handleReset).toHaveBeenCalledTimes(1);
   });
+
+  it('renders toggle button with Show Streaming Log by default and triggers onToggleStreamLog', () => {
+    const handleToggle = vi.fn();
+    render(
+      <PromptBar
+        onSearch={vi.fn()}
+        onReset={vi.fn()}
+        isLoading={false}
+        showStreamLog={false}
+        onToggleStreamLog={handleToggle}
+      />
+    );
+
+    const toggleBtn = screen.getByRole('button', { name: /Show Streaming Log/i });
+    expect(toggleBtn).toBeInTheDocument();
+    fireEvent.click(toggleBtn);
+    expect(handleToggle).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders toggle button with Hide Streaming Log when showStreamLog is true', () => {
+    const handleToggle = vi.fn();
+    render(
+      <PromptBar
+        onSearch={vi.fn()}
+        onReset={vi.fn()}
+        isLoading={false}
+        showStreamLog={true}
+        onToggleStreamLog={handleToggle}
+      />
+    );
+
+    const toggleBtn = screen.getByRole('button', { name: /Hide Streaming Log/i });
+    expect(toggleBtn).toBeInTheDocument();
+  });
 });

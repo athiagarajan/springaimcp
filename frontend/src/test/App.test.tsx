@@ -66,4 +66,29 @@ describe('App Component', () => {
       fireEvent.click(closeBtn);
     });
   });
+
+  it('hides streaming log by default and toggles visibility when button is clicked', async () => {
+    await act(async () => {
+      render(<App />);
+    });
+
+    // Hidden by default
+    expect(screen.queryByText('Spring AI Streaming Reasoning Log')).not.toBeInTheDocument();
+    const toggleBtn = screen.getByRole('button', { name: /Show Streaming Log/i });
+    expect(toggleBtn).toBeInTheDocument();
+
+    // Click to show
+    await act(async () => {
+      fireEvent.click(toggleBtn);
+    });
+    expect(screen.getByText('Spring AI Streaming Reasoning Log')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Hide Streaming Log/i })).toBeInTheDocument();
+
+    // Click to hide again
+    const hideBtn = screen.getByRole('button', { name: /Hide Streaming Log/i });
+    await act(async () => {
+      fireEvent.click(hideBtn);
+    });
+    expect(screen.queryByText('Spring AI Streaming Reasoning Log')).not.toBeInTheDocument();
+  });
 });
