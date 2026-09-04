@@ -23,6 +23,9 @@ class SecurityConfigTest {
     @MockBean
     private TempleAiService templeAiService;
 
+    @MockBean
+    private com.springaimcp.service.TempleImageService templeImageService;
+
     @Test
     void testUnauthenticatedAccessToSwaggerReturns401() {
         webTestClient.get()

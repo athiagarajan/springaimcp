@@ -5,7 +5,6 @@ import com.springaimcp.repository.TempleRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
-import org.springframework.ai.chat.client.ChatClient;
 
 import java.util.List;
 
@@ -21,17 +20,13 @@ class TempleAiServiceTest {
     @BeforeEach
     void setUp() {
         templeRepository = Mockito.mock(TempleRepository.class);
-        ChatClient.Builder builder = Mockito.mock(ChatClient.Builder.class);
-        ChatClient chatClient = Mockito.mock(ChatClient.class);
-        when(builder.build()).thenReturn(chatClient);
-
-        templeAiService = new TempleAiService(builder, templeRepository);
+        templeAiService = new TempleAiService(templeRepository);
     }
 
     @Test
     void testGetAllTemples() {
         Temple t = new Temple(1L, "Temple 1", "Moolavar", null, null, null, null, null, null, null, "City", "District", "State", null, null, null, null, null, null, null, null, null, null, null, null, 10.0, 77.0, null, null, null, null);
-        when(templeRepository.findAll()).thenReturn(List.of(t));
+        when(templeRepository.executeDynamicSql(anyString())).thenReturn(List.of(t));
 
         List<Temple> result = templeAiService.getAllTemples();
         assertEquals(1, result.size());
@@ -39,12 +34,22 @@ class TempleAiServiceTest {
     }
 
     @Test
-    void testSearch() {
-        Temple t = new Temple(1L, "Searched Temple", "Moolavar", null, null, null, null, null, null, null, "City", "District", "State", null, null, null, null, null, null, null, null, null, null, null, null, 10.0, 77.0, null, null, null, null);
-        when(templeRepository.searchByCriteria(anyString(), anyString(), anyString(), anyString())).thenReturn(List.of(t));
+    void testGenerateDeterministicSqlForMuruganDistance() {
+        String sql = templeAiService.generateDeterministicSql("2 murugan temple within 150 km from thanjavur");
+        assertNotNull(sql);
+        assertTrue(sql.contains("SELECT * FROM temples"));
+        assertTrue(sql.contains("murug"));
+        assertTrue(sql.contains("ABS(hf_lat - 10.7870) <= 1.5000"));
+        assertTrue(sql.contains("ABS(hf_lan - 79.1378) <= 1.5000"));
+        assertTrue(sql.contains("LIMIT 2"));
+    }
 
-        List<Temple> result = templeAiService.search("TN", "Dindigul", "Palani", "Idumban");
-        assertEquals(1, result.size());
-        assertEquals("Searched Temple", result.get(0).name());
+    @Test
+    void testGenerateDeterministicSqlForShiva() {
+        String sql = templeAiService.generateDeterministicSql("shiva temples in madurai");
+        assertNotNull(sql);
+        assertTrue(sql.contains("SELECT * FROM temples"));
+        assertTrue(sql.contains("siva") || sql.contains("shiva"));
+        assertTrue(sql.contains("madurai"));
     }
 }

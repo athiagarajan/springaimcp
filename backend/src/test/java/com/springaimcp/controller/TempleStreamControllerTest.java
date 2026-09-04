@@ -4,9 +4,13 @@ import com.springaimcp.service.TempleAiService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
+import org.springframework.http.codec.ServerSentEvent;
 import reactor.core.publisher.Flux;
 import reactor.test.StepVerifier;
 
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
@@ -24,14 +28,17 @@ class TempleStreamControllerTest {
     @Test
     void testStreamQuery() {
         when(templeAiService.streamDynamicQuery(anyString()))
-                .thenReturn(Flux.just("Chunk1", "Chunk2", "Chunk3"));
+                .thenReturn(Flux.just("Chunk1", "Chunk2"));
 
-        Flux<String> result = streamController.streamQuery("Lord Shiva temples");
+        Flux<ServerSentEvent<Map<String, String>>> result = streamController.streamQuery("Lord Shiva temples");
 
         StepVerifier.create(result)
-                .expectNext("Chunk1")
-                .expectNext("Chunk2")
-                .expectNext("Chunk3")
+                .assertNext(sse -> assertEquals("Chunk1", sse.data().get("text")))
+                .assertNext(sse -> assertEquals("Chunk2", sse.data().get("text")))
+                .assertNext(sse -> {
+                    assertEquals("complete", sse.event());
+                    assertEquals("[DONE]", sse.data().get("text"));
+                })
                 .verifyComplete();
     }
 }
