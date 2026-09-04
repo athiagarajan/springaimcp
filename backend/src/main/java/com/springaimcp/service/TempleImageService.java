@@ -77,6 +77,7 @@ public class TempleImageService {
 
         // AVENUE 1: Direct Wikimedia Commons Search (Highest Authenticity & Quantity)
         for (String q : queries) {
+            if (!isSpecificQuery(q)) continue;
             List<TempleImage> commonsImgs = searchWikimediaCommonsDirect(q);
             for (TempleImage img : commonsImgs) {
                 if (seenUrls.add(img.url())) {
@@ -92,6 +93,7 @@ public class TempleImageService {
         // AVENUE 2: Wikipedia Unified PageImages Search
         if (results.size() < 3) {
             for (String q : queries) {
+                if (!isSpecificQuery(q)) continue;
                 List<TempleImage> wikiImgs = searchWikipediaUnified(q);
                 for (TempleImage img : wikiImgs) {
                     if (seenUrls.add(img.url())) {
@@ -108,15 +110,31 @@ public class TempleImageService {
         return results;
     }
 
+    private String sanitize(String input) {
+        if (input == null) return "";
+        String trimmed = input.trim();
+        if (trimmed.equals("-") || trimmed.equalsIgnoreCase("none") || trimmed.equalsIgnoreCase("nil")
+                || trimmed.equalsIgnoreCase("n/a") || trimmed.equalsIgnoreCase("null") || trimmed.matches("^[\\W_]+$")) {
+            return "";
+        }
+        return trimmed;
+    }
+
+    private boolean isSpecificQuery(String q) {
+        if (q == null || q.isBlank()) return false;
+        String normalized = q.replaceAll("(?i)\\b(temple|mandir|kovil|shrine|sri|lord)\\b", "").replaceAll("[\\W_]+", "").trim();
+        return normalized.length() >= 3;
+    }
+
     private List<String> generateSearchQueries(Temple temple) {
         List<String> queries = new ArrayList<>();
-        String rawName = temple.name() != null ? temple.name() : "";
+        String rawName = sanitize(temple.name());
         String clean = rawName.replaceAll("(?i)^sri\\s+", "")
                               .replaceAll("(?i)\\btemple\\b", "")
                               .trim();
-        String city = temple.city() != null ? temple.city().trim() : "";
-        String moolavar = temple.moolavar() != null ? temple.moolavar().trim() : "";
-        String historical = temple.historicalName() != null ? temple.historicalName().trim() : "";
+        String city = sanitize(temple.city());
+        String moolavar = sanitize(temple.moolavar());
+        String historical = sanitize(temple.historicalName());
 
         if (!clean.isBlank()) {
             if (!city.isBlank() && !clean.toLowerCase().contains(city.toLowerCase())) {
@@ -129,7 +147,7 @@ public class TempleImageService {
         if (!moolavar.isBlank()) {
             String mClean = moolavar.replaceAll("(?i)\\b(lord|sri|swami|swamy)\\b", "").trim();
             String firstM = mClean.split("[,;/]")[0].trim();
-            if (!firstM.isBlank()) {
+            if (!firstM.isBlank() && firstM.length() >= 3) {
                 if (!city.isBlank()) {
                     queries.add(city + " " + firstM + " Temple");
                     queries.add(firstM + " Temple " + city);
@@ -138,7 +156,7 @@ public class TempleImageService {
             }
         }
 
-        if (!historical.isBlank()) {
+        if (!historical.isBlank() && historical.length() >= 3) {
             queries.add(historical + " Temple");
             if (!city.isBlank()) {
                 queries.add(historical + " " + city);
@@ -154,6 +172,7 @@ public class TempleImageService {
 
     private List<TempleImage> searchWikimediaCommonsDirect(String query) {
         List<TempleImage> list = new ArrayList<>();
+        if (!isSpecificQuery(query)) return list;
         try {
             String encoded = URLEncoder.encode(query, StandardCharsets.UTF_8);
             String url = "https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch="
@@ -208,6 +227,7 @@ public class TempleImageService {
 
     private List<TempleImage> searchWikipediaUnified(String query) {
         List<TempleImage> list = new ArrayList<>();
+        if (!isSpecificQuery(query)) return list;
         try {
             String encoded = URLEncoder.encode(query, StandardCharsets.UTF_8);
             String url = "https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch="
@@ -255,25 +275,35 @@ public class TempleImageService {
     private List<TempleImage> getRepresentativeImages(Temple temple) {
         List<TempleImage> list = new ArrayList<>();
         String moolavar = (temple.moolavar() != null) ? temple.moolavar().toLowerCase() : "";
+        String name = (temple.name() != null) ? temple.name().toLowerCase() : "";
+        String combined = moolavar + " " + name;
 
-        if (moolavar.contains("shiva") || moolavar.contains("ekambareswarar") || moolavar.contains("lingam") || moolavar.contains("nataraj")) {
+        if (combined.contains("anjaneyar") || combined.contains("hanuman") || combined.contains("maruti")) {
             list.add(new TempleImage(
-                    "https://upload.wikimedia.org/wikipedia/commons/thumb/0/06/Ekambareswarar5.jpg/960px-Ekambareswarar5.jpg",
+                    "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fd/Anjaneyar_Temple%2C_Namakkal.jpg/960px-Anjaneyar_Temple%2C_Namakkal.jpg",
+                    "Sacred Sri Anjaneyar Shrine",
+                    "Ancient South Indian temple dedicated to Lord Anjaneyar (Hanuman)",
+                    "Heritage Cultural Archive"
+            ));
+        } else if (combined.contains("shiva") || combined.contains("ekambareswarar") || combined.contains("lingam") || combined.contains("nataraj")) {
+            list.add(new TempleImage(
+                    "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/95/Ekambareswarar_Temple_2.jpg/960px-Ekambareswarar_Temple_2.jpg",
                     "Dravidian Rajagopuram & Temple Complex",
                     "Majestic stone Rajagopuram showcasing traditional Dravidian temple architecture",
                     "Heritage Cultural Archive"
             ));
+        } else if (combined.contains("murugan") || combined.contains("subramanya") || combined.contains("idumban") || combined.contains("karthik")) {
             list.add(new TempleImage(
-                    "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Brihadisvara_Temple_during_Maha_Shivaratri-WUS03611_%28edit%29.jpg/960px-Brihadisvara_Temple_during_Maha_Shivaratri-WUS03611_%28edit%29.jpg",
-                    "Sacred Vimanam & Sanctum Sanctorum",
-                    "Ancient stone sanctum dedicated to Lord Shiva",
-                    "Heritage Cultural Archive"
-            ));
-        } else if (moolavar.contains("murugan") || moolavar.contains("subramanya") || moolavar.contains("idumban")) {
-            list.add(new TempleImage(
-                    "https://upload.wikimedia.org/wikipedia/commons/thumb/7/76/Palanihills.JPG/960px-Palanihills.JPG",
+                    "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c4/Arulmigu_Dhandayuthapani_Swamy_Temple_in_Palany_hill.jpg/960px-Arulmigu_Dhandayuthapani_Swamy_Temple_in_Palany_hill.jpg",
                     "Sacred Murugan Hill Temple & Gopuram",
                     "Holy hill shrine and surrounding sacred theertham",
+                    "Heritage Cultural Archive"
+            ));
+        } else if (combined.contains("perumal") || combined.contains("vishnu") || combined.contains("ranganath") || combined.contains("venkate") || combined.contains("krishna") || combined.contains("rama")) {
+            list.add(new TempleImage(
+                    "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9e/Srirangam_Temple_Gopuram_View.jpg/960px-Srirangam_Temple_Gopuram_View.jpg",
+                    "Dravidian Vaishnavite Rajagopuram",
+                    "Majestic Dravidian temple tower dedicated to Lord Vishnu",
                     "Heritage Cultural Archive"
             ));
         } else {
