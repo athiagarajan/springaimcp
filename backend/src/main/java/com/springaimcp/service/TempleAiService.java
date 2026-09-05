@@ -31,6 +31,7 @@ public class TempleAiService {
     private static final List<String> GEMINI_MODELS = List.of(
             "gemini-flash-latest",
             "gemini-3.1-flash-lite",
+            "gemini-3.5-flash-lite",
             "gemini-flash-lite-latest"
     );
 
@@ -310,6 +311,8 @@ public class TempleAiService {
 
     private boolean hasEnglishResidue(Temple temple) {
         if (temple == null) return true;
+        if (temple.name() != null && temple.name().matches(".*[a-zA-Z]{3,}.*")) return true;
+        if (temple.city() != null && temple.city().matches(".*[a-zA-Z]{4,}.*")) return true;
         if (temple.location() != null && temple.location().matches(".*[a-zA-Z]{4,}.*")) return true;
         if (temple.address() != null && temple.address().matches(".*[a-zA-Z]{4,}.*")) return true;
         return false;
@@ -336,7 +339,7 @@ public class TempleAiService {
 
         String deityInst = switch (targetLang) {
             case "ta" -> "Ensure authentic Tamil Saivite/Vaishnavite terminology (e.g., 'சிவன்', 'பெருமாள்', 'முருகன்', 'அம்மன்', 'விநாயகர்', 'தீர்த்தம்', 'தல விருட்சம்', 'உற்சவர்').";
-            case "te" -> "Ensure authentic Telugu temple terms (e.g., 'శివుడు', 'పెరుమాళ్', 'స్వామి', 'తీర్థం', 'మూలవర్').";
+            case "te" -> "Ensure authentic Telugu temple terms (e.g., 'శివుడు', 'పెరుమాళ్', 'స్వామి', 'தீర్థம்', 'మూలవర్').";
             case "hi" -> "Ensure authentic Hindi devotional terms (e.g., 'शिव', 'विष्णु', 'तीर्थ', 'मूलवर').";
             default -> "";
         };
@@ -348,103 +351,171 @@ public class TempleAiService {
             default -> "";
         };
 
-        try {
-            String prompt = String.format(
-                """
-                You are a sacred temple scholar and master translator. Translate the following South Indian temple details into %s (%s).
+        String prompt = String.format(
+            """
+            You are a sacred temple scholar and master translator. Translate the following South Indian temple details into %s (%s).
 
-                MANDATORY TRANSLATION RULES:
-                1. ZERO ENGLISH CHARACTERS:
-                   Not a single Latin/English letter (A-Z, a-z) is allowed anywhere in the output JSON values.
-                2. TRANSLATE ALL PROPER NOUNS & LABELS:
-                   Translate all temple names, deity names, city, district, state names into %s.
-                3. DEITY ACCURACY:
-                   %s
-                   %s
-                4. SCRIPT PURITY:
-                   Every single character in all values must be in %s.
-                5. FULL FIELD COVERAGE:
-                   You MUST translate every field: "name", "historicalName", "city", "district", "state", "moolavar", "urchavar", "ammanThayar",
-                   "thalaVirutcham", "theertham", "singers", "oldYear", "agamamPooja", "speciality", "history", "generalInformation", "address",
-                   "location", "openingTime", "festival", "nearByRailwayStation", "nearByAirport", "accommodation", "prayers", "thanksGiving",
-                   "greatness", "features".
+            MANDATORY TRANSLATION RULES:
+            1. ZERO ENGLISH CHARACTERS:
+               Not a single Latin/English letter (A-Z, a-z) is allowed anywhere in the output JSON values.
+            2. TRANSLATE ALL PROPER NOUNS & LABELS:
+               Translate all temple names, deity names, city, district, state names into %s.
+            3. DEITY ACCURACY:
+               %s
+               %s
+            4. SCRIPT PURITY:
+               Every single character in all values must be in %s.
+            5. FULL FIELD COVERAGE:
+               You MUST translate every field: "name", "historicalName", "city", "district", "state", "moolavar", "urchavar", "ammanThayar",
+               "thalaVirutcham", "theertham", "singers", "oldYear", "agamamPooja", "speciality", "history", "generalInformation", "address",
+               "location", "openingTime", "festival", "nearByRailwayStation", "nearByAirport", "accommodation", "prayers", "thanksGiving",
+               "greatness", "features".
 
-                Temple details to translate:
-                Name: %s
-                Historical Name: %s
-                City: %s
-                District: %s
-                State: %s
-                Moolavar: %s
-                Urchavar: %s
-                Amman / Thayar: %s
-                Thala Virutcham: %s
-                Theertham: %s
-                Singers: %s
-                Old Year: %s
-                Agamam / Pooja: %s
-                Speciality: %s
-                History: %s
-                General Information: %s
-                Address: %s
-                Location: %s
-                Opening Time: %s
-                Festival: %s
-                Nearest Railway Station: %s
-                Nearest Airport: %s
-                Accommodation: %s
-                Prayers: %s
-                Thanks Giving: %s
-                Greatness: %s
-                Features: %s
+            Temple details to translate:
+            Name: %s
+            Historical Name: %s
+            City: %s
+            District: %s
+            State: %s
+            Moolavar: %s
+            Urchavar: %s
+            Amman / Thayar: %s
+            Thala Virutcham: %s
+            Theertham: %s
+            Singers: %s
+            Old Year: %s
+            Agamam / Pooja: %s
+            Speciality: %s
+            History: %s
+            General Information: %s
+            Address: %s
+            Location: %s
+            Opening Time: %s
+            Festival: %s
+            Nearest Railway Station: %s
+            Nearest Airport: %s
+            Accommodation: %s
+            Prayers: %s
+            Thanks Giving: %s
+            Greatness: %s
+            Features: %s
 
-                CRITICAL INSTRUCTIONS:
-                Return ONLY a valid JSON object with the exact keys:
-                "name", "historicalName", "city", "district", "state", "moolavar", "urchavar", "ammanThayar",
-                "thalaVirutcham", "theertham", "singers", "oldYear", "agamamPooja", "speciality", "history",
-                "generalInformation", "address", "location", "openingTime", "festival", "nearByRailwayStation", "nearByAirport",
-                "accommodation", "prayers", "thanksGiving", "greatness", "features"
-                """,
-                langName,
-                scriptName,
-                deityInst,
-                extraInst,
-                scriptName,
-                escapeJson(original.name(), 0),
-                escapeJson(original.historicalName(), 0),
-                escapeJson(original.city(), 0),
-                escapeJson(original.district(), 0),
-                escapeJson(original.state(), 0),
-                escapeJson(original.moolavar(), 0),
-                escapeJson(original.urchavar(), 0),
-                escapeJson(original.ammanThayar(), 0),
-                escapeJson(original.thalaVirutcham(), 0),
-                escapeJson(original.theertham(), 0),
-                escapeJson(original.singers(), 0),
-                escapeJson(original.oldYear(), 0),
-                escapeJson(original.agamamPooja(), 0),
-                escapeJson(original.speciality(), 0),
-                escapeJson(original.history(), 0),
-                escapeJson(original.generalInformation(), 0),
-                escapeJson(original.address(), 0),
-                escapeJson(original.location(), 0),
-                escapeJson(original.openingTime(), 0),
-                escapeJson(original.festival(), 0),
-                escapeJson(original.nearByRailwayStation(), 0),
-                escapeJson(original.nearByAirport(), 0),
-                escapeJson(original.accommodation(), 0),
-                escapeJson(original.prayers(), 0),
-                escapeJson(original.thanksGiving(), 0),
-                escapeJson(original.greatness(), 0),
-                escapeJson(original.features(), 0)
-            );
+            CRITICAL INSTRUCTIONS:
+            Return ONLY a valid JSON object with the exact keys:
+            "name", "historicalName", "city", "district", "state", "moolavar", "urchavar", "ammanThayar",
+            "thalaVirutcham", "theertham", "singers", "oldYear", "agamamPooja", "speciality", "history",
+            "generalInformation", "address", "location", "openingTime", "festival", "nearByRailwayStation", "nearByAirport",
+            "accommodation", "prayers", "thanksGiving", "greatness", "features"
+            """,
+            langName,
+            scriptName,
+            deityInst,
+            extraInst,
+            scriptName,
+            escapeJson(original.name(), 0),
+            escapeJson(original.historicalName(), 0),
+            escapeJson(original.city(), 0),
+            escapeJson(original.district(), 0),
+            escapeJson(original.state(), 0),
+            escapeJson(original.moolavar(), 0),
+            escapeJson(original.urchavar(), 0),
+            escapeJson(original.ammanThayar(), 0),
+            escapeJson(original.thalaVirutcham(), 0),
+            escapeJson(original.theertham(), 0),
+            escapeJson(original.singers(), 0),
+            escapeJson(original.oldYear(), 0),
+            escapeJson(original.agamamPooja(), 0),
+            escapeJson(original.speciality(), 0),
+            escapeJson(original.history(), 0),
+            escapeJson(original.generalInformation(), 0),
+            escapeJson(original.address(), 0),
+            escapeJson(original.location(), 0),
+            escapeJson(original.openingTime(), 0),
+            escapeJson(original.festival(), 0),
+            escapeJson(original.nearByRailwayStation(), 0),
+            escapeJson(original.nearByAirport(), 0),
+            escapeJson(original.accommodation(), 0),
+            escapeJson(original.prayers(), 0),
+            escapeJson(original.thanksGiving(), 0),
+            escapeJson(original.greatness(), 0),
+            escapeJson(original.features(), 0)
+        );
 
-            String jsonText = callGeminiApi(prompt, true);
-            return parseTranslatedTemple(original, jsonText);
-        } catch (Exception e) {
-            log.error("Gemini Flash translation failed for {}: {}", targetLang, e.getMessage());
-            return original;
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(Duration.ofSeconds(5));
+        requestFactory.setReadTimeout(Duration.ofSeconds(25));
+
+        RestClient restClient = RestClient.builder()
+                .requestFactory(requestFactory)
+                .build();
+
+        Map<String, Object> part = Map.of("text", prompt);
+        Map<String, Object> contentMap = Map.of("parts", List.of(part));
+        Map<String, Object> genConfig = Map.of(
+                "temperature", 0.1,
+                "maxOutputTokens", 8192,
+                "responseMimeType", "application/json"
+        );
+        Map<String, Object> reqBody = Map.of("contents", List.of(contentMap), "generationConfig", genConfig);
+
+        Temple bestEffortTranslation = null;
+
+        for (String model : GEMINI_MODELS) {
+            String url = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + apiKey;
+            for (int attempt = 1; attempt <= 2; attempt++) {
+                try {
+                    log.info("Attempting translation for temple {} ({}) into {} using model '{}' (attempt {})",
+                            original.id(), original.name(), targetLang, model, attempt);
+
+                    String responseStr = restClient.post()
+                            .uri(url)
+                            .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                            .body(reqBody)
+                            .retrieve()
+                            .body(String.class);
+
+                    if (responseStr != null && !responseStr.isBlank()) {
+                        JsonNode respNode = objectMapper.readTree(responseStr);
+                        String jsonText = respNode.path("candidates").get(0).path("content").path("parts").get(0).path("text").asText();
+                        Temple candidate = parseTranslatedTemple(original, jsonText);
+
+                        if (candidate != null) {
+                            boolean nameChanged = !candidate.name().equalsIgnoreCase(original.name());
+                            boolean noResidue = !hasEnglishResidue(candidate);
+
+                            if (nameChanged && noResidue) {
+                                log.info("✅ Translation for temple {} ({}) to {} succeeded with model '{}'",
+                                        original.id(), original.name(), targetLang, model);
+                                return candidate;
+                            } else if (nameChanged) {
+                                if (bestEffortTranslation == null) {
+                                    bestEffortTranslation = candidate;
+                                }
+                                log.warn("Model '{}' produced partial translation with minor residue for temple {}. Trying alternative model...",
+                                        model, original.id());
+                            } else {
+                                log.warn("Model '{}' left temple name unchanged in English for temple {}. Trying alternative model...",
+                                        model, original.id());
+                            }
+                        }
+                    }
+                } catch (Exception ex) {
+                    log.warn("Gemini translation attempt {} with model '{}' failed for temple {}: {}",
+                            attempt, model, original.id(), ex.getMessage());
+                    if (attempt < 2) {
+                        try { Thread.sleep(300); } catch (InterruptedException ignored) {}
+                    }
+                }
+            }
         }
+
+        if (bestEffortTranslation != null) {
+            log.warn("Using best-effort translation for temple {} to {} after evaluating all models", original.id(), targetLang);
+            return bestEffortTranslation;
+        }
+
+        log.error("All Gemini models failed to translate temple {} to {}. Falling back to original English.", original.id(), targetLang);
+        return original;
     }
 
     private String callGeminiApi(String promptText, boolean jsonMode) {
@@ -462,7 +533,7 @@ public class TempleAiService {
 
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(Duration.ofSeconds(4));
-        requestFactory.setReadTimeout(Duration.ofSeconds(8));
+        requestFactory.setReadTimeout(Duration.ofSeconds(12));
 
         RestClient restClient = RestClient.builder()
                 .requestFactory(requestFactory)
@@ -583,7 +654,16 @@ public class TempleAiService {
         if (node != null && node.has(fieldName) && !node.get(fieldName).isNull() && !node.get(fieldName).asText().isBlank()) {
             return node.get(fieldName).asText();
         }
+        String snakeCase = camelToSnake(fieldName);
+        if (node != null && node.has(snakeCase) && !node.get(snakeCase).isNull() && !node.get(snakeCase).asText().isBlank()) {
+            return node.get(snakeCase).asText();
+        }
         return defaultValue;
+    }
+
+    private String camelToSnake(String str) {
+        if (str == null) return "";
+        return str.replaceAll("([a-z])([A-Z]+)", "$1_$2").toLowerCase();
     }
 
     public Flux<String> streamDynamicQuery(String prompt) {

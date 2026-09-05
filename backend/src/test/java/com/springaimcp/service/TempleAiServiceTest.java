@@ -52,4 +52,22 @@ class TempleAiServiceTest {
         assertTrue(sql.contains("siva") || sql.contains("shiva"));
         assertTrue(sql.contains("madurai"));
     }
+
+    @Test
+    void testTranslateTempleEnglishReturnsOriginalImmediately() {
+        Temple t = new Temple(1L, "Temple 1", "Moolavar", null, null, null, null, null, null, null, "City", "District", "State", null, null, null, null, null, null, null, null, null, null, null, null, 10.0, 77.0, null, null, null, null);
+        when(templeRepository.executeDynamicSql("SELECT * FROM temples WHERE id = 1")).thenReturn(List.of(t));
+
+        Temple result = templeAiService.translateTemple(1L, "en").block();
+        assertNotNull(result);
+        assertEquals("Temple 1", result.name());
+    }
+
+    @Test
+    void testTranslateTempleNotFoundReturnsNull() {
+        when(templeRepository.executeDynamicSql("SELECT * FROM temples WHERE id = 999")).thenReturn(List.of());
+
+        Temple result = templeAiService.translateTemple(999L, "ta").block();
+        assertNull(result);
+    }
 }
