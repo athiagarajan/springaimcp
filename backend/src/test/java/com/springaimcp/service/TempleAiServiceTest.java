@@ -70,4 +70,42 @@ class TempleAiServiceTest {
         Temple result = templeAiService.translateTemple(999L, "ta").block();
         assertNull(result);
     }
+
+    @Test
+    void testTranslateTempleTamilTranslatesCorrectly() {
+        Temple t = new Temple(550L, "sri Anjali Varatha Anjaneyar temple", "Anjali Varatha Anjaneyar", null, null, null, null, null, "500 years old", null, "Chinnalapatti", "Dindigul", "Tamil Nadu", null, null, null, null, null, null, null, null, null, null, null, null, 10.36, 77.97, null, null, null, null);
+        when(templeRepository.executeDynamicSql("SELECT * FROM temples WHERE id = 550")).thenReturn(List.of(t));
+
+        Temple result = templeAiService.translateTemple(550L, "ta").block();
+        assertNotNull(result);
+        assertNotEquals("sri Anjali Varatha Anjaneyar temple", result.name());
+        assertTrue(result.name().contains("ஸ்ரீ") || result.name().contains("திருக்கோயில்"));
+        assertEquals("சின்னாளப்பட்டி", result.city());
+        assertEquals("திண்டுக்கல்", result.district());
+        assertEquals("தமிழ்நாடு", result.state());
+    }
+
+    @Test
+    void testTranslateTempleTeluguTranslatesCorrectly() {
+        Temple t = new Temple(550L, "sri Anjali Varatha Anjaneyar temple", "Anjali Varatha Anjaneyar", null, null, null, null, null, "500 years old", null, "Chinnalapatti", "Dindigul", "Tamil Nadu", null, null, null, null, null, null, null, null, null, null, null, null, 10.36, 77.97, null, null, null, null);
+        when(templeRepository.executeDynamicSql("SELECT * FROM temples WHERE id = 550")).thenReturn(List.of(t));
+
+        Temple result = templeAiService.translateTemple(550L, "te").block();
+        assertNotNull(result);
+        assertNotEquals("sri Anjali Varatha Anjaneyar temple", result.name());
+        assertTrue(result.name().contains("శ్రీ") || result.name().contains("ఆలయం"));
+        assertEquals("చిన్నాలపట్టి", result.city());
+    }
+
+    @Test
+    void testTranslateTempleHindiTranslatesCorrectly() {
+        Temple t = new Temple(550L, "sri Anjali Varatha Anjaneyar temple", "Anjali Varatha Anjaneyar", null, null, null, null, null, "500 years old", null, "Chinnalapatti", "Dindigul", "Tamil Nadu", null, null, null, null, null, null, null, null, null, null, null, null, 10.36, 77.97, null, null, null, null);
+        when(templeRepository.executeDynamicSql("SELECT * FROM temples WHERE id = 550")).thenReturn(List.of(t));
+
+        Temple result = templeAiService.translateTemple(550L, "hi").block();
+        assertNotNull(result);
+        assertNotEquals("sri Anjali Varatha Anjaneyar temple", result.name());
+        assertTrue(result.name().contains("श्री") || result.name().contains("मंदिर"));
+        assertEquals("चिन्नालपट्टी", result.city());
+    }
 }

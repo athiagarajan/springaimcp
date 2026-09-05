@@ -8,6 +8,7 @@ bin/
 # Node / Vite Build artifacts
 **/node_modules/
 **/dist/
+**/coverage/
 .output/
 
 # IDE files

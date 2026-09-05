@@ -61,9 +61,8 @@ export const searchTemples = async (query: string): Promise<Temple[]> => {
 const translationCache = new Map<string, Temple>();
 
 const hasEnglishResidue = (temple: Temple): boolean => {
-  if (temple.location && /[a-zA-Z]{4,}/.test(temple.location)) return true;
-  if (temple.greatness && /\bLord\b/.test(temple.greatness)) return true;
-  if (temple.generalInformation && /\bLord\b/.test(temple.generalInformation)) return true;
+  if (temple.name && /[a-zA-Z]{3,}/.test(temple.name)) return true;
+  if (temple.city && /[a-zA-Z]{4,}/.test(temple.city)) return true;
   return false;
 };
 

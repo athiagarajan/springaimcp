@@ -25,13 +25,14 @@ public class TempleAiService {
     private final TempleRepository templeRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    @org.springframework.beans.factory.annotation.Value("${temple.translation.gemini-api-key:AIzaSyC2oepYV1Kvo21YGs8VBxgMF-5jHvDkGFM}")
+    @org.springframework.beans.factory.annotation.Value("${temple.translation.gemini-api-key:${GEMINI_API_KEY:}}")
     private String geminiApiKey;
 
     private static final List<String> GEMINI_MODELS = List.of(
             "gemini-flash-latest",
-            "gemini-3.1-flash-lite",
+            "gemini-3.6-flash",
             "gemini-3.5-flash-lite",
+            "gemini-3.1-flash-lite",
             "gemini-flash-lite-latest"
     );
 
@@ -54,8 +55,16 @@ public class TempleAiService {
             Map.entry("nagapattinam", new double[]{10.7656, 79.8424})
     );
 
-    public TempleAiService(TempleRepository templeRepository) {
+    private final TempleTranslationFallback fallbackTranslator;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public TempleAiService(TempleRepository templeRepository, TempleTranslationFallback fallbackTranslator) {
         this.templeRepository = templeRepository;
+        this.fallbackTranslator = fallbackTranslator != null ? fallbackTranslator : new TempleTranslationFallback();
+    }
+
+    public TempleAiService(TempleRepository templeRepository) {
+        this(templeRepository, new TempleTranslationFallback());
     }
 
     public List<Temple> getAllTemples() {
@@ -297,16 +306,29 @@ public class TempleAiService {
                 }
             }
 
-            Temple translated = translateWithGemini(original, lang, geminiApiKey);
-            boolean isValidTranslation = translated != null 
-                && !translated.name().equalsIgnoreCase(original.name())
-                && !hasEnglishResidue(translated);
-            if (isValidTranslation) {
-                translationCache.put(cacheKey, translated);
-                return translated;
+            if (geminiApiKey != null && !geminiApiKey.isBlank()) {
+                try {
+                    Temple translated = translateWithGemini(original, lang, geminiApiKey);
+                    boolean isValidTranslation = translated != null 
+                        && !translated.name().equalsIgnoreCase(original.name())
+                        && !hasEnglishResidue(translated);
+                    if (isValidTranslation) {
+                        translationCache.put(cacheKey, translated);
+                        return translated;
+                    }
+                    if (translated != null && !translated.name().equalsIgnoreCase(original.name())) {
+                        translationCache.put(cacheKey, translated);
+                        return translated;
+                    }
+                } catch (Exception e) {
+                    log.error("Exception during translateWithGemini for temple {}: {}", id, e.getMessage(), e);
+                }
             }
-            if (translated != null && !translated.name().equalsIgnoreCase(original.name())) {
-                return translated;
+
+            Temple fallback = fallbackTranslator.translate(original, lang);
+            if (fallback != null && !fallback.name().equalsIgnoreCase(original.name())) {
+                translationCache.put(cacheKey, fallback);
+                return fallback;
             }
             return original;
         })
@@ -412,6 +434,7 @@ public class TempleAiService {
             """,
             langName,
             scriptName,
+            langName,
             deityInst,
             extraInst,
             scriptName,

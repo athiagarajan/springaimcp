@@ -258,9 +258,8 @@ export const TempleDetailModal: React.FC<TempleDetailModalProps> = ({ temple, on
     // Check if already cached in component state without English residue
     const cachedItem = translationCache[targetLang];
     const hasResidue = cachedItem && (
-      Boolean(cachedItem.location && /[a-zA-Z]{4,}/.test(cachedItem.location)) ||
-      Boolean(cachedItem.greatness && /\bLord\b/.test(cachedItem.greatness)) ||
-      Boolean(cachedItem.generalInformation && /\bLord\b/.test(cachedItem.generalInformation))
+      Boolean(cachedItem.name && /[a-zA-Z]{3,}/.test(cachedItem.name)) ||
+      Boolean(cachedItem.city && /[a-zA-Z]{4,}/.test(cachedItem.city))
     );
     if (cachedItem && !hasResidue) {
       setDisplayedLang(targetLang);
@@ -273,8 +272,16 @@ export const TempleDetailModal: React.FC<TempleDetailModalProps> = ({ temple, on
     setTranslationError(null);
     try {
       const result = await fetchTempleTranslation(temple.id, targetLang);
-      setTranslationCache((prev) => ({ ...prev, [targetLang]: result }));
-      setDisplayedLang(targetLang);
+      const isEnglishFallback = Boolean(
+        result.name && temple.name && result.name.trim().toLowerCase() === temple.name.trim().toLowerCase()
+      );
+      if (isEnglishFallback) {
+        setTranslationError('Unable to translate details right now. Displaying English version.');
+        setDisplayedLang('en');
+      } else {
+        setTranslationCache((prev) => ({ ...prev, [targetLang]: result }));
+        setDisplayedLang(targetLang);
+      }
     } catch (err: any) {
       console.error('Translation error:', err);
       setTranslationError('Unable to translate details right now. Displaying English version.');
