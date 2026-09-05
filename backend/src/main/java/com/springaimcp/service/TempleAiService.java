@@ -25,7 +25,7 @@ public class TempleAiService {
     private final TempleRepository templeRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    @org.springframework.beans.factory.annotation.Value("${temple.translation.gemini-api-key:}")
+    @org.springframework.beans.factory.annotation.Value("${temple.translation.gemini-api-key:AIzaSyC2oepYV1Kvo21YGs8VBxgMF-5jHvDkGFM}")
     private String geminiApiKey;
 
     private static final List<String> GEMINI_MODELS = List.of(
@@ -303,8 +303,12 @@ public class TempleAiService {
                 && !hasEnglishResidue(translated);
             if (isValidTranslation) {
                 translationCache.put(cacheKey, translated);
+                return translated;
             }
-            return (translated != null) ? translated : original;
+            if (translated != null && !translated.name().equalsIgnoreCase(original.name())) {
+                return translated;
+            }
+            return original;
         })
         .subscribeOn(Schedulers.boundedElastic());
     }
@@ -313,13 +317,12 @@ public class TempleAiService {
         if (temple == null) return true;
         if (temple.name() != null && temple.name().matches(".*[a-zA-Z]{3,}.*")) return true;
         if (temple.city() != null && temple.city().matches(".*[a-zA-Z]{4,}.*")) return true;
-        if (temple.location() != null && temple.location().matches(".*[a-zA-Z]{4,}.*")) return true;
-        if (temple.address() != null && temple.address().matches(".*[a-zA-Z]{4,}.*")) return true;
         return false;
     }
 
     private Temple translateWithGemini(Temple original, String targetLang, String apiKey) {
         if (apiKey == null || apiKey.isBlank()) {
+            log.warn("Gemini API key is not configured for temple translation. Returning original English.");
             return original;
         }
 
@@ -595,19 +598,15 @@ public class TempleAiService {
         }
         try {
             String cleanJson = rawJson.trim();
-            if (cleanJson.startsWith("```json")) {
-                cleanJson = cleanJson.substring(7);
-            }
-            if (cleanJson.endsWith("```")) {
-                cleanJson = cleanJson.substring(0, cleanJson.length() - 3);
-            }
-            cleanJson = cleanJson.trim();
             int firstBrace = cleanJson.indexOf("{");
-            if (firstBrace != -1) {
+            int lastBrace = cleanJson.lastIndexOf("}");
+            if (firstBrace != -1 && lastBrace != -1 && lastBrace >= firstBrace) {
+                cleanJson = cleanJson.substring(firstBrace, lastBrace + 1);
+            } else if (firstBrace != -1) {
                 cleanJson = cleanJson.substring(firstBrace);
-            }
-            if (!cleanJson.endsWith("}")) {
-                cleanJson = cleanJson + "\"}";
+                if (!cleanJson.endsWith("}")) {
+                    cleanJson = cleanJson + "\"}";
+                }
             }
             JsonNode root = objectMapper.readTree(cleanJson);
 

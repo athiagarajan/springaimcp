@@ -32,4 +32,4 @@ springdoc:
 
 temple:
   translation:
-    gemini-api-key: ${GEMINI_API_KEY:}
+    gemini-api-key: ${GEMINI_API_KEY:AIzaSyC2oepYV1Kvo21YGs8VBxgMF-5jHvDkGFM}
