@@ -1,13 +1,44 @@
 package com.springaimcp.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.springaimcp.model.Temple;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import java.net.URI;
+import java.net.URLEncoder;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
 @Component
 public class TempleTranslationFallback {
+
+    private static final Logger log = LoggerFactory.getLogger(TempleTranslationFallback.class);
+    private final ObjectMapper objectMapper;
+    private final HttpClient httpClient;
+    private final Map<String, String> memoryCache = new ConcurrentHashMap<>();
+
+    public TempleTranslationFallback() {
+        this(new ObjectMapper());
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public TempleTranslationFallback(ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper != null ? objectMapper : new ObjectMapper();
+        this.httpClient = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(4))
+                .followRedirects(HttpClient.Redirect.NORMAL)
+                .build();
+    }
 
     private static final List<Map.Entry<String, String>> VOCAB_TA = new ArrayList<>();
     private static final List<Map.Entry<String, String>> VOCAB_TE = new ArrayList<>();
@@ -243,6 +274,21 @@ public class TempleTranslationFallback {
         addVocab("history", "வரலாறு", "చరిత్ర", "इतिहास");
         addVocab("speciality", "சிறப்பு", "ప్రత్యేకత", "विशेषता");
 
+        // Additional Place Names, Deities & Historical figures
+        addVocab("veerabadrar", "வீரபத்ரர்", "వీరభద్రుడు", "वीरभद्र");
+        addVocab("veerabadra", "வீரபத்ர", "వీరభద్ర", "वीरभद्र");
+        addVocab("virabhadrar", "வீரபத்ரர்", "వీరభద్రుడు", "वीरभद्र");
+        addVocab("virabhadra", "வீரபத்ர", "వీరభద్ర", "वीरभद्र");
+        addVocab("bhadrakali", "பத்ரகாளி", "భద్రకాళి", "भद्रकाली");
+        addVocab("rayachoti", "ராயச்சோட்டி", "రాయచోటి", "रायचोटी");
+        addVocab("kadapa", "கடப்பா", "కడప", "कडपा");
+        addVocab("andhra pradesh", "ஆந்திரப் பிரதேசம்", "ఆంధ్ర ప్రదేశ్", "आंध्र प्रदेश");
+        addVocab("andhra", "ஆந்திரா", "ఆంధ్ర", "आंध्र");
+        addVocab("rajarayudu", "ராஜராயுடு", "రాజారాయుడు", "राजारायडू");
+        addVocab("daksha", "தக்ஷன்", "దక్షుడు", "दक्ष");
+        addVocab("yagna", "யாகம்", "యజ్ఞం", "यज्ञ");
+        addVocab("yaga", "யாகம்", "యజ్ఞం", "यज्ञ");
+
         // Sort descending by length so longer phrases match first
         VOCAB_TA.sort((a, b) -> Integer.compare(b.getKey().length(), a.getKey().length()));
         VOCAB_TE.sort((a, b) -> Integer.compare(b.getKey().length(), a.getKey().length()));
@@ -254,46 +300,96 @@ public class TempleTranslationFallback {
         String lang = (targetLang != null && !targetLang.isBlank()) ? targetLang.toLowerCase().trim() : "ta";
         if ("en".equals(lang)) return original;
 
+        CompletableFuture<String> name = CompletableFuture.supplyAsync(() -> translateField(original.name(), lang, true));
+        CompletableFuture<String> moolavar = CompletableFuture.supplyAsync(() -> translateField(original.moolavar(), lang, false));
+        CompletableFuture<String> urchavar = CompletableFuture.supplyAsync(() -> translateField(original.urchavar(), lang, false));
+        CompletableFuture<String> ammanThayar = CompletableFuture.supplyAsync(() -> translateField(original.ammanThayar(), lang, false));
+        CompletableFuture<String> thalaVirutcham = CompletableFuture.supplyAsync(() -> translateField(original.thalaVirutcham(), lang, false));
+        CompletableFuture<String> theertham = CompletableFuture.supplyAsync(() -> translateField(original.theertham(), lang, false));
+        CompletableFuture<String> agamamPooja = CompletableFuture.supplyAsync(() -> translateField(original.agamamPooja(), lang, false));
+        CompletableFuture<String> oldYear = CompletableFuture.supplyAsync(() -> translateField(original.oldYear(), lang, false));
+        CompletableFuture<String> historicalName = CompletableFuture.supplyAsync(() -> translateField(original.historicalName(), lang, false));
+        CompletableFuture<String> city = CompletableFuture.supplyAsync(() -> translateField(original.city(), lang, false));
+        CompletableFuture<String> district = CompletableFuture.supplyAsync(() -> translateField(original.district(), lang, false));
+        CompletableFuture<String> state = CompletableFuture.supplyAsync(() -> translateField(original.state(), lang, false));
+        CompletableFuture<String> singers = CompletableFuture.supplyAsync(() -> translateField(original.singers(), lang, false));
+        CompletableFuture<String> festival = CompletableFuture.supplyAsync(() -> translateField(original.festival(), lang, false));
+        CompletableFuture<String> generalInformation = CompletableFuture.supplyAsync(() -> translateField(original.generalInformation(), lang, false));
+        CompletableFuture<String> address = CompletableFuture.supplyAsync(() -> translateField(original.address(), lang, false));
+        CompletableFuture<String> openingTime = CompletableFuture.supplyAsync(() -> translateField(original.openingTime(), lang, false));
+        CompletableFuture<String> speciality = CompletableFuture.supplyAsync(() -> translateField(original.speciality(), lang, false));
+        CompletableFuture<String> prayers = CompletableFuture.supplyAsync(() -> translateField(original.prayers(), lang, false));
+        CompletableFuture<String> thanksGiving = CompletableFuture.supplyAsync(() -> translateField(original.thanksGiving(), lang, false));
+        CompletableFuture<String> greatness = CompletableFuture.supplyAsync(() -> translateField(original.greatness(), lang, false));
+        CompletableFuture<String> history = CompletableFuture.supplyAsync(() -> translateField(original.history(), lang, false));
+        CompletableFuture<String> features = CompletableFuture.supplyAsync(() -> translateField(original.features(), lang, false));
+        CompletableFuture<String> location = CompletableFuture.supplyAsync(() -> translateField(original.location(), lang, false));
+        CompletableFuture<String> nearByAirport = CompletableFuture.supplyAsync(() -> translateField(original.nearByAirport(), lang, false));
+        CompletableFuture<String> nearByRailwayStation = CompletableFuture.supplyAsync(() -> translateField(original.nearByRailwayStation(), lang, false));
+        CompletableFuture<String> accommodation = CompletableFuture.supplyAsync(() -> translateField(original.accommodation(), lang, false));
+
+        CompletableFuture.allOf(
+            name, moolavar, urchavar, ammanThayar, thalaVirutcham, theertham,
+            agamamPooja, oldYear, historicalName, city, district, state,
+            singers, festival, generalInformation, address, openingTime,
+            speciality, prayers, thanksGiving, greatness, history, features,
+            location, nearByAirport, nearByRailwayStation, accommodation
+        ).join();
+
         return new Temple(
             original.id(),
-            translateField(original.name(), lang, true),
-            translateField(original.moolavar(), lang, false),
-            translateField(original.urchavar(), lang, false),
-            translateField(original.ammanThayar(), lang, false),
-            translateField(original.thalaVirutcham(), lang, false),
-            translateField(original.theertham(), lang, false),
-            translateField(original.agamamPooja(), lang, false),
-            translateField(original.oldYear(), lang, false),
-            translateField(original.historicalName(), lang, false),
-            translateField(original.city(), lang, false),
-            translateField(original.district(), lang, false),
-            translateField(original.state(), lang, false),
-            translateField(original.singers(), lang, false),
-            translateField(original.festival(), lang, false),
-            translateField(original.generalInformation(), lang, false),
-            translateField(original.address(), lang, false),
+            name.join(),
+            moolavar.join(),
+            urchavar.join(),
+            ammanThayar.join(),
+            thalaVirutcham.join(),
+            theertham.join(),
+            agamamPooja.join(),
+            oldYear.join(),
+            historicalName.join(),
+            city.join(),
+            district.join(),
+            state.join(),
+            singers.join(),
+            festival.join(),
+            generalInformation.join(),
+            address.join(),
             original.phone(),
-            translateField(original.openingTime(), lang, false),
-            translateField(original.speciality(), lang, false),
-            translateField(original.prayers(), lang, false),
-            translateField(original.thanksGiving(), lang, false),
-            translateField(original.greatness(), lang, false),
-            translateField(original.history(), lang, false),
-            translateField(original.features(), lang, false),
+            openingTime.join(),
+            speciality.join(),
+            prayers.join(),
+            thanksGiving.join(),
+            greatness.join(),
+            history.join(),
+            features.join(),
             original.hfLat(),
             original.hfLan(),
-            translateField(original.location(), lang, false),
-            translateField(original.nearByAirport(), lang, false),
-            translateField(original.nearByRailwayStation(), lang, false),
-            translateField(original.accommodation(), lang, false)
+            location.join(),
+            nearByAirport.join(),
+            nearByRailwayStation.join(),
+            accommodation.join()
         );
     }
 
     public String translateField(String text, String lang, boolean isName) {
         if (text == null || text.isBlank()) return text;
-        String trimmed = text.trim();
+        String trimmed = text.replaceAll("\\?{2,}", " - ").trim();
         if (trimmed.equals("-") || trimmed.equals(".")) return text;
+        if (!trimmed.matches(".*[a-zA-Z].*")) return trimmed;
 
+        String cacheKey = lang + "_" + trimmed;
+        if (memoryCache.containsKey(cacheKey)) {
+            return memoryCache.get(cacheKey);
+        }
+
+        // 1. Try Neural Machine Translation API (GTX or MyMemory)
+        String neural = translateWithNeuralApi(trimmed, lang);
+        if (neural != null && !neural.isBlank() && containsAppropriateScript(neural, lang)) {
+            memoryCache.put(cacheKey, neural);
+            return neural;
+        }
+
+        // 2. Lexicon / Curated Vocab Replacement
         List<Map.Entry<String, String>> vocab = switch (lang) {
             case "te" -> VOCAB_TE;
             case "hi" -> VOCAB_HI;
@@ -309,13 +405,118 @@ public class TempleTranslationFallback {
         // Apply smart place and name affixes for any remaining compound words
         result = applySmartAffixes(result, lang);
 
-        // If any remaining Latin characters exist, transliterate phonetically using the target script
+        // 3. Transliterate short proper noun stems ONLY (never full sentences)
         if (result.matches(".*[a-zA-Z].*")) {
-            result = transliterateRemainingLatin(result, lang);
+            if (isName || (!result.contains(" ") && result.length() < 25)) {
+                result = transliterateRemainingLatin(result, lang);
+            }
         }
 
         result = result.replaceAll("\\s+", " ").trim();
+        memoryCache.put(cacheKey, result);
         return result;
+    }
+
+    private boolean containsAppropriateScript(String text, String lang) {
+        if (text == null) return false;
+        return switch (lang) {
+            case "te" -> text.matches(".*[\\u0C00-\\u0C7F].*");
+            case "hi" -> text.matches(".*[\\u0900-\\u097F].*");
+            default -> text.matches(".*[\\u0B80-\\u0BFF].*");
+        };
+    }
+
+    private String translateWithNeuralApi(String text, String targetLang) {
+        String myMemory = translateWithMyMemory(text, targetLang);
+        if (myMemory != null && !myMemory.isBlank()) {
+            return myMemory;
+        }
+        String gtx = translateWithGtx(text, targetLang);
+        if (gtx != null && !gtx.isBlank()) {
+            return gtx;
+        }
+        return null;
+    }
+
+    private String translateWithGtx(String text, String targetLang) {
+        try {
+            String encoded = URLEncoder.encode(text, StandardCharsets.UTF_8);
+            String urlStr = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl="
+                    + targetLang + "&dt=t&q=" + encoded;
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(urlStr))
+                    .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+                    .timeout(Duration.ofSeconds(6))
+                    .GET()
+                    .build();
+
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+            if (response.statusCode() == 200 && response.body() != null) {
+                JsonNode root = objectMapper.readTree(response.body());
+                if (root.isArray() && root.size() > 0 && root.get(0).isArray()) {
+                    StringBuilder sb = new StringBuilder();
+                    for (JsonNode chunk : root.get(0)) {
+                        if (chunk.isArray() && chunk.size() > 0 && !chunk.get(0).isNull()) {
+                            sb.append(chunk.get(0).asText());
+                        }
+                    }
+                    String result = sb.toString().trim();
+                    if (!result.isBlank()) {
+                        return result;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.debug("GTX translation skipped/failed for '{}' ({}): {}", text, targetLang, e.getMessage());
+        }
+        return null;
+    }
+
+    private String translateWithMyMemory(String text, String targetLang) {
+        if (text == null || text.isBlank()) return null;
+        if (text.length() > 400) {
+            String[] parts = text.split("(?<=\\.)\\s+");
+            StringBuilder combined = new StringBuilder();
+            for (String part : parts) {
+                if (part.isBlank()) continue;
+                String transPart = translateWithMyMemoryChunk(part.trim(), targetLang);
+                if (transPart != null && !transPart.isBlank()) {
+                    if (combined.length() > 0) combined.append(" ");
+                    combined.append(transPart);
+                } else {
+                    if (combined.length() > 0) combined.append(" ");
+                    combined.append(part);
+                }
+            }
+            return combined.length() > 0 ? combined.toString() : null;
+        }
+        return translateWithMyMemoryChunk(text, targetLang);
+    }
+
+    private String translateWithMyMemoryChunk(String text, String targetLang) {
+        try {
+            String queryText = text.length() > 450 ? text.substring(0, 450) : text;
+            String encodedQ = URLEncoder.encode(queryText, StandardCharsets.UTF_8);
+            String urlStr = "https://api.mymemory.translated.net/get?q=" + encodedQ + "&langpair=en%7C" + targetLang;
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(urlStr))
+                    .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+                    .timeout(Duration.ofSeconds(6))
+                    .GET()
+                    .build();
+
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+            if (response.statusCode() == 200 && response.body() != null) {
+                JsonNode root = objectMapper.readTree(response.body());
+                String trans = root.path("responseData").path("translatedText").asText();
+                if (trans != null && !trans.isBlank() && !trans.startsWith("MYMEMORY WARNING")) {
+                    return trans.trim();
+                }
+            }
+        } catch (Exception e) {
+            log.debug("MyMemory translation skipped/failed for '{}' ({}): {}", text, targetLang, e.getMessage());
+        }
+        return null;
     }
 
     private static final String[][] AFFIXES_TA = {
