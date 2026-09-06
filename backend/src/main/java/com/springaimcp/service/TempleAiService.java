@@ -364,8 +364,8 @@ public class TempleAiService {
 
         String deityInst = switch (targetLang) {
             case "ta" -> "Ensure authentic Tamil Saivite/Vaishnavite terminology (e.g., 'சிவன்', 'பெருமாள்', 'முருகன்', 'அம்மன்', 'விநாயகர்', 'தீர்த்தம்', 'தல விருட்சம்', 'உற்சவர்').";
-            case "te" -> "Ensure authentic Telugu temple terms (e.g., 'శివుడు', 'పెరుమాళ్', 'స్వామి', 'தீర్థம்', 'మూలవర్').";
-            case "hi" -> "Ensure authentic Hindi devotional terms (e.g., 'शिव', 'विष्णु', 'तीर्थ', 'मूलवर').";
+            case "te" -> "Ensure authentic Telugu temple terms (e.g., 'శివుడు', 'శ్రీమహావిష్ణువు', 'స్వామి', 'తీర్థం', 'మూలవిరాట్టు', 'ఉత్సవమూర్తి').";
+            case "hi" -> "Ensure authentic Hindi devotional terms (e.g., 'भगवान शिव', 'भगवान विष्णु', 'स्वामी', 'तीर्थ', 'मूलविग्रह', 'उत्सव मूर्ति').";
             default -> "";
         };
 

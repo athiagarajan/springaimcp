@@ -20,13 +20,15 @@ public class TempleTranslationFallback {
     }
 
     static {
-        // Titles & Deities
+        // Titles & Temple generic terms
         addVocab("sri", "ஸ்ரீ", "శ్రీ", "श्री");
         addVocab("shri", "ஸ்ரீ", "శ్రీ", "श्री");
         addVocab("temple", "திருக்கோயில்", "ఆలయం", "मंदिर");
         addVocab("kovil", "கோயில்", "కోవిల్", "मंदिर");
         addVocab("shrine", "திருக்கோயில்", "ఆలయం", "मंदिर");
         addVocab("lord", "இறைவன்", "భగవంతుడు", "भगवान");
+
+        // Deities
         addVocab("shiva", "சிவபெருமான்", "శివుడు", "भगवान शिव");
         addVocab("siva", "சிவபெருமான்", "శివుడు", "भगवान शिव");
         addVocab("muruga", "முருகப்பெருமான்", "మురుగన్ స్వామి", "भगवान मुरुगन");
@@ -44,6 +46,7 @@ public class TempleTranslationFallback {
         addVocab("vishnu", "விஷ்ணு", "విష్ణువు", "भगवान विष्णु");
         addVocab("ganesha", "விநாயகர்", "వినాయకుడు", "गणेश जी");
         addVocab("vinayagar", "விநாயகர்", "వినాయకుడు", "गणेश जी");
+        addVocab("ganapathy", "விநாயகர்", "గణపతి", "गणपति");
         addVocab("amman", "அம்மன்", "అమ్మవారు", "अम्मन");
         addVocab("thayar", "தாயார்", "తాయారు", "थायार");
         addVocab("swamy", "சுவாமி", "స్వామి", "स्वामी");
@@ -61,6 +64,7 @@ public class TempleTranslationFallback {
         addVocab("prasanna", "பிரசன்ன", "ప్రసన్న", "प्रसन्न");
         addVocab("venketasar", "வெங்கடேசர்", "వెంకటేశ్వరుడు", "वेंकटेश");
         addVocab("venkatesa", "வெங்கடேசர்", "వెంకటేశ్వరుడు", "वेंकटेश");
+        addVocab("venkateswarar", "வெங்கடேஸ்வரர்", "వెంకటేశ్వరుడు", "वेंकटेश्वर");
         addVocab("vellimalai nathar", "வெள்ளிமலை நாதர்", "వెండికొండ నాథుడు", "वेल्लिमलाई नाथ");
         addVocab("nellivananathar", "நெல்லிவனநாதர்", "నెల్లివననాథుడు", "नेल्लीवननाथर");
         addVocab("varthamaneeswarar", "வர்த்தமானீஸ்வரர்", "వర్ధమానేశ్వరుడు", "वर्धमानेश्वर");
@@ -81,7 +85,54 @@ public class TempleTranslationFallback {
         addVocab("iswarar", "ஈஸ்வரர்", "ఈశ్వరుడు", "ईश्वर");
         addVocab("nathar", "நாதர்", "నాథుడు", "नाथ");
 
-        // Cities, Districts & Locations
+        // Saints, Poets, Kings & Devotees (People Names)
+        addVocab("arunagirinathar", "அருணகிரிநாதர்", "అరుణగిరినాథుడు", "अरुणागिरिनाथ");
+        addVocab("thirugnanasambandar", "திருஞானசம்பந்தர்", "తిరుజ్ఞానసంబంధర్", "तिरुज्ञानसंबंधर");
+        addVocab("sambandar", "சம்பந்தர்", "సంబంధర్", "संबंधर");
+        addVocab("thirunavukkarasar", "திருநாவுக்கரசர்", "తిరునావుక్కరసర్", "तिरुनावुक्करासर");
+        addVocab("appar", "அப்பர்", "అప్పర్", "अप्पर");
+        addVocab("sundarar", "சுந்தரர்", "సుందరర్", "सुंदरर");
+        addVocab("manickavasagar", "மாணிக்கவாசகர்", "మాణిక్యవాచకర్", "माणिक्यवाचकर");
+        addVocab("manikkavasagar", "மாணிக்கவாசகர்", "మాణిక్యవాచకర్", "माणिक्यवाचकर");
+        addVocab("ramanujar", "ராமானுஜர்", "రామానుజుడు", "रामानुज");
+        addVocab("ramanuja", "ராமானுஜர்", "రామానుజుడు", "रामानुज");
+        addVocab("agasthiyar", "அகத்தியர்", "అగస్త్యుడు", "अगस्त्य");
+        addVocab("agastya", "அகத்தியர்", "అగస్త్యుడు", "अगस्त्य");
+        addVocab("adi shankara", "ஆதி சங்கரர்", "ఆది శంకరుడు", "आदि शंकर");
+        addVocab("shankara", "சங்கரர்", "శంకరుడు", "शंकर");
+        addVocab("thirumangai azhwar", "திருமங்கையாழ்வார்", "తిరుమంగై ఆళ్వార్", "तिरुमंगई आलवार");
+        addVocab("thirumangai", "திருமங்கை", "తిరుమంగై", "तिरुमंगई");
+        addVocab("nammazhwar", "நம்மாழ்வார்", "నమ్మాళ్వార్", "नम्मालवार");
+        addVocab("namalwar", "நம்மாழ்வார்", "నమ్మాళ్వార్", "नम्मालवार");
+        addVocab("azhwar", "ஆழ்வார்", "ఆళ్వార్", "आलवार");
+        addVocab("alwar", "ஆழ்வார்", "ఆళ్వార్", "आलवार");
+        addVocab("peyazhwar", "பேயாழ்வார்", "పేయాళ్వార్", "पेयालवार");
+        addVocab("bhoothathazhwar", "பூதத்தாழ்வார்", "భూతత్తాళ్వార్", "भूतत्तालवार");
+        addVocab("poigai azhwar", "பொய்கையாழ்வார்", "పొయ్గై ఆళ్వార్", "पोयगई आलवार");
+        addVocab("andal", "ஆண்டாள்", "ఆండాళ్", "आंडाल");
+        addVocab("periyazhwar", "பெரியாழ்வார்", "పెరియాళ్వార్", "पेरियालवार");
+        addVocab("kulasekara azhwar", "குலசேகர ஆழ்வார்", "కులశేఖర ఆళ్వార్", "कुलशेखर आलवार");
+        addVocab("thirumalisai azhwar", "திருமழிசை ஆழ்வார்", "తిరుమళిశై ఆళ్వార్", "तिरुमळिशै आलवार");
+        addVocab("thondaradippodi", "தொண்டரடிப்பொடி ஆழ்வார்", "తొండరడిప్పొడి ఆళ్వార్", "तौंडराडिपौडि आलवार");
+        addVocab("thiruppan azhwar", "திருப்பாணாழ்வார்", "తిరుప్పాణాళ్వార్", "तिरुप्पाणालवार");
+        addVocab("madhurakavi azhwar", "மதுரகவி ஆழ்வார்", "మధురకవి ఆళ్వార్", "मधुरकवि आलवार");
+        addVocab("nayanmar", "நாயன்மார்", "నాయనార్లు", "नायनार");
+        addVocab("nayanmars", "நாயன்மார்கள்", "నాయనార్లు", "नायनार");
+        addVocab("chola", "சோழர்", "చోళులు", "चोल");
+        addVocab("cholas", "சோழர்கள்", "చోళులు", "चोल");
+        addVocab("pandya", "பாண்டியர்", "పాండ్యులు", "पांड्य");
+        addVocab("pandyas", "பாண்டியர்கள்", "పాండ్యులు", "पांड्य");
+        addVocab("pallava", "பல்லவர்", "పల్లవులు", "पल्लव");
+        addVocab("pallavas", "பல்லவர்கள்", "పల్లవులు", "पल्लव");
+        addVocab("cheran", "சேரர்", "చేరులు", "चेर");
+        addVocab("chera", "சேரர்", "చేరులు", "चेर");
+        addVocab("nayak", "நாயக்கர்", "నాయకులు", "नायक");
+        addVocab("nayakar", "நாயக்கர்", "నాయకులు", "नायक");
+        addVocab("raja raja chola", "ராஜராஜ சோழன்", "రాజరాజ చోళుడు", "राजराज चोल");
+        addVocab("kulothunga", "குலோத்துங்கன்", "కులోత్తుంగుడు", "कुलोत्तुंग");
+        addVocab("vijayanagara", "விஜயநகர", "విజయనగర", "विजयनगर");
+
+        // Cities, Districts & Locations (Place Names)
         addVocab("chinnalapatti", "சின்னாளப்பட்டி", "చిన్నాలపట్టి", "चिन्नालपट्टी");
         addVocab("dindigul", "திண்டுக்கல்", "దిండిగల్", "डिंडीगुल");
         addVocab("tamil nadu", "தமிழ்நாடு", "తమిళనాడు", "तमिलनाडु");
@@ -102,6 +153,7 @@ public class TempleTranslationFallback {
         addVocab("kumbakonam", "கும்பகோணம்", "కుంభకోణం", "कुंभकोणम");
         addVocab("theni", "தேனி", "తేని", "थेनी");
         addVocab("kodangipatti", "கோடங்கிபட்டி", "కోడంగిపట్టి", "कोडंगिपट्टी");
+        addVocab("theertha thotti", "தீர்த்தத் தொட்டி", "తీర్థ తొట్టి", "तीर्थ तोट्टी");
         addVocab("mayiladuthurai", "மயிலாடுதுறை", "మయిలాడుదురై", "मयिलादुथुरै");
         addVocab("nagapattinam", "நாகப்பட்டினம்", "నాగపట్నం", "नागपट्टिनम");
         addVocab("tiruvarur", "திருவாரூர்", "తిరువారూరు", "तिरुवारूर");
@@ -125,6 +177,43 @@ public class TempleTranslationFallback {
         addVocab("tirunellikka", "திருநெல்லிக்கா", "తిరునెల్లిక్కా", "तिरुनेल्लिक्का");
         addVocab("tirumalai vaiyavur", "திருமலை வையாவூர்", "తిరుమలై వైయావూరు", "तिरुमलै वैयावूर");
         addVocab("thiruvaheendrapuram", "திருவஹீந்திரபுரம்", "తిరువహీంద్రపురం", "तिरुवहींद्रपुरम");
+        addVocab("tiruvannamalai", "திருவண்ணாமலை", "తిరువణ్ణామలై", "तिरुवन्नामलाई");
+        addVocab("thiruvannamalai", "திருவண்ணாமலை", "తిరువణ్ణామలై", "तिरुवन्नामलाई");
+        addVocab("kallidaikurichi", "கல்லிடைக்குறிச்சி", "కల్లిడైకురిచి", "कल्लिदैकुरिची");
+        addVocab("vedaranyam", "வேதாரண்யம்", "వేదారణ్యం", "वेदारण्यम");
+        addVocab("srirangam", "ஸ்ரீரங்கம்", "శ్రీరంగం", "श्रीरंगम");
+        addVocab("samayapuram", "சமயபுரம்", "సమయపురం", "समयपुरम");
+        addVocab("swamimalai", "சுவாமிமலை", "స్వామిమలై", "स्वामीमलाई");
+        addVocab("tiruttani", "திருத்தணி", "తిరుత్తణి", "तिरुत्तणी");
+        addVocab("thiruttani", "திருத்தணி", "తిరుత్తణి", "तिरुत्तणी");
+        addVocab("thiruparankundram", "திருப்பரங்குன்றம்", "తిరుప్పరన్కుండ్రం", "तिरुप्परनकुंद्रम");
+        addVocab("pazhamudircholai", "பழமுதிர்சோலை", "పళముదిర్చోలై", "पळमुदिरचोलै");
+        addVocab("tirunallar", "திருநள்ளாறு", "తిరునల్లారు", "तिरुनाल्लारु");
+        addVocab("thirunallar", "திருநள்ளாறு", "తిరునల్లారు", "तिरुनाल्लारु");
+        addVocab("tirupati", "திருப்பதி", "తిరుపతి", "तिरुपति");
+        addVocab("srivilliputhur", "ஸ்ரீவில்லிபுத்தூர்", "శ్రీవిల్లిపుత్తూరు", "श्रीविल्लिपुत्तूर");
+        addVocab("kanyakumari", "கன்னியாகுமரி", "కన్యాకుమారి", "कन्याकुमारी");
+        addVocab("suchindram", "சுசீந்திரம்", "సుచీంద్రం", "सुचिंद्रम");
+        addVocab("tenkasi", "தென்காசி", "తెన్కాశి", "तेनकाशी");
+        addVocab("courtallam", "குற்றாலம்", "కుర్తాళం", "कुट्रालम");
+        addVocab("kutralam", "குற்றாலம்", "కుర్తాళం", "कुट्रालम");
+        addVocab("villupuram", "விழுப்புரம்", "విల్లుపురం", "विल्लुपुरम");
+        addVocab("vellore", "வேலூர்", "వేలూరు", "वेल्लोर");
+        addVocab("tiruvallur", "திருவள்ளூர்", "తిరువళ్లూరు", "तिरुवल्लूर");
+        addVocab("thiruvallur", "திருவள்ளூர்", "తిరువళ్లూరు", "तिरुवल्लूर");
+        addVocab("dharmapuri", "தர்மபுரி", "ధర్మపురి", "धर्मपुरी");
+        addVocab("krishnagiri", "கிருஷ்ணகிரி", "కృష్ణగిరి", "कृष्णगिरि");
+        addVocab("namakkal", "நாமக்கல்", "నామక్కల్", "नामक्कल");
+        addVocab("karur", "கரூர்", "కరూర్", "करूर");
+        addVocab("perambalur", "பெரம்பலூர்", "పెరంబలూరు", "पेरांबलूर");
+        addVocab("ariyalur", "அரியலூர்", "అరియలూరు", "अरियालूर");
+        addVocab("pudukkottai", "புதுக்கோட்டை", "పుదుక్కోట్టై", "पुदुक्कोट्टई");
+        addVocab("sivaganga", "சிவகங்கை", "శివగంగ", "शिवगंगा");
+        addVocab("ramanathapuram", "ராமநாதபுரம்", "రామనాథపురం", "रामनाथपुरम");
+        addVocab("virudhunagar", "விருதுநகர்", "విరుదునగర్", "विरुद्धनगर");
+        addVocab("thoothukudi", "தூத்துக்குடி", "తూత్తుకుడి", "थूथुकुडी");
+        addVocab("tuticorin", "தூத்துக்குடி", "తూత్తుకుడి", "थूथुकुडी");
+        addVocab("nilgiris", "நீலகிரி", "నీలగిరి", "नीलगिरि");
 
         // Common temple phrases
         addVocab("500 years old", "500 ஆண்டுகள் பழமையானது", "500 సంవత్సరాల పురాతనమైనది", "500 वर्ष पुराना");
@@ -144,7 +233,7 @@ public class TempleTranslationFallback {
         addVocab("district", "மாவட்டம்", "జిల్లా", "जिला");
         addVocab("state", "மாநிலம்", "రాష్ట్రం", "राज्य");
         addVocab("devotees pray", "பக்தர்கள் பிரார்த்தனை செய்கிறார்கள்", "భక్తులు ప్రార్థిస్తారు", "भक्त प्रार्थना करते हैं");
-        addVocab("abishek", "அபிஷேகம்", "அభిషేకం", "अभिषेक");
+        addVocab("abishek", "அபிஷேகம்", "అభిషేకం", "अभिषेक");
         addVocab("pooja", "பூஜை", "పూజ", "पूजा");
         addVocab("festival", "திருவிழா", "ఉత్సవం", "त्योहार");
         addVocab("prayers", "பிரார்த்தனைகள்", "ప్రార్థనలు", "प्रार्थनाएँ");
@@ -217,13 +306,54 @@ public class TempleTranslationFallback {
             result = p.matcher(result).replaceAll(entry.getValue());
         }
 
-        // If any remaining Latin characters exist, transliterate phonetically
+        // Apply smart place and name affixes for any remaining compound words
+        result = applySmartAffixes(result, lang);
+
+        // If any remaining Latin characters exist, transliterate phonetically using the target script
         if (result.matches(".*[a-zA-Z].*")) {
             result = transliterateRemainingLatin(result, lang);
         }
 
         result = result.replaceAll("\\s+", " ").trim();
         return result;
+    }
+
+    private static final String[][] AFFIXES_TA = {
+        {"thiruvanna", "திருவண்ணா"}, {"tiruvanna", "திருவண்ணா"},
+        {"thiru", "திரு"}, {"tiru", "திரு"},
+        {"malai", "மலை"}, {"patti", "பட்டி"}, {"thotti", "தொட்டி"},
+        {"puram", "புரம்"}, {"kulam", "குளம்"}, {"kudi", "குடி"},
+        {"oor", "ஊர்"}, {"ur", "ஊர்"}
+    };
+
+    private static final String[][] AFFIXES_TE = {
+        {"thiruvanna", "తిరువణ్ణా"}, {"tiruvanna", "తిరువణ్ణా"},
+        {"thiru", "తిరు"}, {"tiru", "తిరు"},
+        {"malai", "మలై"}, {"patti", "పట్టి"}, {"thotti", "తొట్టి"},
+        {"puram", "పురం"}, {"kulam", "కుళం"}, {"kudi", "కుడి"},
+        {"oor", "ఊరు"}, {"ur", "ఊరు"}
+    };
+
+    private static final String[][] AFFIXES_HI = {
+        {"thiruvanna", "तिरुवन्ना"}, {"tiruvanna", "तिरुवन्ना"},
+        {"thiru", "तिरु"}, {"tiru", "तिरु"},
+        {"malai", "मलाई"}, {"patti", "पट्टी"}, {"thotti", "तोट्टी"},
+        {"puram", "पुरम"}, {"kulam", "कुलम"}, {"kudi", "कुडी"},
+        {"oor", "ऊर"}, {"ur", "ऊर"}
+    };
+
+    private String applySmartAffixes(String text, String lang) {
+        String[][] affixes = switch (lang) {
+            case "te" -> AFFIXES_TE;
+            case "hi" -> AFFIXES_HI;
+            default -> AFFIXES_TA;
+        };
+        String res = text;
+        for (String[] pair : affixes) {
+            Pattern p = Pattern.compile("(?i)" + Pattern.quote(pair[0]));
+            res = p.matcher(res).replaceAll(pair[1]);
+        }
+        return res;
     }
 
     private String transliterateRemainingLatin(String text, String lang) {
@@ -241,6 +371,7 @@ public class TempleTranslationFallback {
         return sb.toString();
     }
 
+    // 1. TAMIL SCRIPT MAPPINGS
     private static final String[][] CONSONANTS_TA = {
         {"sh", "ஷ"}, {"th", "த"}, {"dh", "த"}, {"ch", "ச"}, {"zh", "ழ"},
         {"bh", "ப"}, {"ph", "ப"}, {"kh", "க"}, {"gh", "க"},
@@ -249,25 +380,91 @@ public class TempleTranslationFallback {
         {"b", "ப"}, {"m", "ம"}, {"y", "ய"}, {"r", "ர"},
         {"l", "ல"}, {"v", "வ"}, {"w", "வ"}, {"h", "ஹ"}
     };
-
     private static final String[][] VOWELS_TA = {
         {"aa", "ா"}, {"ee", "ீ"}, {"ii", "ீ"}, {"oo", "ோ"}, {"uu", "ூ"},
         {"ai", "ை"}, {"au", "ௌ"},
         {"a", ""}, {"e", "ெ"}, {"i", "ி"}, {"o", "ொ"}, {"u", "ு"}
     };
-
     private static final String[][] INITIAL_VOWELS_TA = {
         {"aa", "ஆ"}, {"ee", "ஈ"}, {"ii", "ஈ"}, {"oo", "ஓ"}, {"uu", "ஊ"},
         {"ai", "ஐ"}, {"au", "ஔ"},
         {"a", "அ"}, {"e", "எ"}, {"i", "இ"}, {"o", "ஒ"}, {"u", "உ"}
     };
 
+    // 2. TELUGU SCRIPT MAPPINGS
+    private static final String[][] CONSONANTS_TE = {
+        {"sh", "శ"}, {"th", "త"}, {"dh", "ద"}, {"ch", "చ"}, {"zh", "ళ"},
+        {"bh", "భ"}, {"ph", "ఫ"}, {"kh", "ఖ"}, {"gh", "ఘ"},
+        {"k", "క"}, {"g", "గ"}, {"s", "స"}, {"j", "జ"},
+        {"t", "ట"}, {"d", "డ"}, {"n", "న"}, {"p", "ప"},
+        {"b", "బ"}, {"m", "మ"}, {"y", "య"}, {"r", "ర"},
+        {"l", "ల"}, {"v", "వ"}, {"w", "వ"}, {"h", "హ"}
+    };
+    private static final String[][] VOWELS_TE = {
+        {"aa", "ా"}, {"ee", "ీ"}, {"ii", "ీ"}, {"oo", "ో"}, {"uu", "ూ"},
+        {"ai", "ై"}, {"au", "ౌ"},
+        {"a", ""}, {"e", "ె"}, {"i", "ి"}, {"o", "ొ"}, {"u", "ు"}
+    };
+    private static final String[][] INITIAL_VOWELS_TE = {
+        {"aa", "ఆ"}, {"ee", "ఈ"}, {"ii", "ఈ"}, {"oo", "ఓ"}, {"uu", "ఊ"},
+        {"ai", "ఐ"}, {"au", "ఔ"},
+        {"a", "అ"}, {"e", "ఎ"}, {"i", "ఇ"}, {"o", "ఒ"}, {"u", "ఉ"}
+    };
+
+    // 3. HINDI (DEVANAGARI) SCRIPT MAPPINGS
+    private static final String[][] CONSONANTS_HI = {
+        {"sh", "श"}, {"th", "थ"}, {"dh", "ध"}, {"ch", "च"}, {"zh", "झ"},
+        {"bh", "भ"}, {"ph", "फ"}, {"kh", "ख"}, {"gh", "घ"},
+        {"k", "क"}, {"g", "ग"}, {"s", "स"}, {"j", "ज"},
+        {"t", "ट"}, {"d", "ड"}, {"n", "न"}, {"p", "प"},
+        {"b", "ब"}, {"m", "म"}, {"y", "य"}, {"r", "र"},
+        {"l", "ल"}, {"v", "व"}, {"w", "व"}, {"h", "ह"}
+    };
+    private static final String[][] VOWELS_HI = {
+        {"aa", "ा"}, {"ee", "ी"}, {"ii", "ी"}, {"oo", "ो"}, {"uu", "ू"},
+        {"ai", "ै"}, {"au", "ौ"},
+        {"a", ""}, {"e", "े"}, {"i", "ि"}, {"o", "ो"}, {"u", "ु"}
+    };
+    private static final String[][] INITIAL_VOWELS_HI = {
+        {"aa", "आ"}, {"ee", "ई"}, {"ii", "ई"}, {"oo", "ओ"}, {"uu", "ऊ"},
+        {"ai", "ऐ"}, {"au", "औ"},
+        {"a", "अ"}, {"e", "ए"}, {"i", "इ"}, {"o", "ओ"}, {"u", "उ"}
+    };
+
     private String transliterateWord(String word, String lang) {
         String clean = word.toLowerCase().trim();
+        if (clean.isBlank()) return "";
+
+        String[][] consonants;
+        String[][] vowels;
+        String[][] initials;
+        String halant;
+
+        switch (lang) {
+            case "te" -> {
+                consonants = CONSONANTS_TE;
+                vowels = VOWELS_TE;
+                initials = INITIAL_VOWELS_TE;
+                halant = "్";
+            }
+            case "hi" -> {
+                consonants = CONSONANTS_HI;
+                vowels = VOWELS_HI;
+                initials = INITIAL_VOWELS_HI;
+                halant = "्";
+            }
+            default -> {
+                consonants = CONSONANTS_TA;
+                vowels = VOWELS_TA;
+                initials = INITIAL_VOWELS_TA;
+                halant = "்";
+            }
+        }
+
         StringBuilder res = new StringBuilder();
         int idx = 0;
 
-        for (String[] iv : INITIAL_VOWELS_TA) {
+        for (String[] iv : initials) {
             if (clean.startsWith(iv[0])) {
                 res.append(iv[1]);
                 idx += iv[0].length();
@@ -277,14 +474,14 @@ public class TempleTranslationFallback {
 
         while (idx < clean.length()) {
             boolean matchedC = false;
-            for (String[] c : CONSONANTS_TA) {
+            for (String[] c : consonants) {
                 if (clean.substring(idx).startsWith(c[0])) {
                     res.append(c[1]);
                     idx += c[0].length();
                     matchedC = true;
 
                     boolean matchedV = false;
-                    for (String[] v : VOWELS_TA) {
+                    for (String[] v : vowels) {
                         if (clean.substring(idx).startsWith(v[0])) {
                             res.append(v[1]);
                             idx += v[0].length();
@@ -293,14 +490,14 @@ public class TempleTranslationFallback {
                         }
                     }
                     if (!matchedV && idx < clean.length()) {
-                        res.append("்");
+                        res.append(halant);
                     }
                     break;
                 }
             }
             if (!matchedC) {
                 boolean matchedV = false;
-                for (String[] v : VOWELS_TA) {
+                for (String[] v : vowels) {
                     if (clean.substring(idx).startsWith(v[0])) {
                         res.append(v[1]);
                         idx += v[0].length();
