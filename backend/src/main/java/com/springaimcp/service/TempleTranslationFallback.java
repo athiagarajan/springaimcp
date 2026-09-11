@@ -382,20 +382,28 @@ public class TempleTranslationFallback {
             return memoryCache.get(cacheKey);
         }
 
-        // 1. Try Neural Machine Translation API (GTX or MyMemory)
-        String neural = translateWithNeuralApi(trimmed, lang);
-        if (neural != null && !neural.isBlank() && containsAppropriateScript(neural, lang)) {
-            memoryCache.put(cacheKey, neural);
-            return neural;
-        }
-
-        // 2. Lexicon / Curated Vocab Replacement
         List<Map.Entry<String, String>> vocab = switch (lang) {
             case "te" -> VOCAB_TE;
             case "hi" -> VOCAB_HI;
             default -> VOCAB_TA;
         };
 
+        // 1. Direct curated vocabulary match (exact sacred term or place name)
+        for (Map.Entry<String, String> entry : vocab) {
+            if (entry.getKey().equalsIgnoreCase(trimmed)) {
+                memoryCache.put(cacheKey, entry.getValue());
+                return entry.getValue();
+            }
+        }
+
+        // 2. Try Neural Machine Translation API (GTX or MyMemory) for sentences / terms not in dictionary
+        String neural = translateWithNeuralApi(trimmed, lang);
+        if (neural != null && !neural.isBlank() && containsAppropriateScript(neural, lang)) {
+            memoryCache.put(cacheKey, neural);
+            return neural;
+        }
+
+        // 3. Lexicon / Curated Vocab Replacement in phrases
         String result = trimmed;
         for (Map.Entry<String, String> entry : vocab) {
             Pattern p = Pattern.compile("(?i)\\b" + Pattern.quote(entry.getKey()) + "\\b");

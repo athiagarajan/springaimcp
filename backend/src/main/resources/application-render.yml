@@ -1,0 +1,15 @@
+server:
+  port: ${PORT:8080}
+
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://${DB_HOST:templeinfo-db.cnwoi0c6ort7.us-east-2.rds.amazonaws.com}:${DB_PORT:5432}/${DB_NAME:templeinfo}?sslmode=require}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+  r2dbc:
+    url: ${SPRING_R2DBC_URL:r2dbc:postgresql://${DB_HOST:templeinfo-db.cnwoi0c6ort7.us-east-2.rds.amazonaws.com}:${DB_PORT:5432}/${DB_NAME:templeinfo}?sslmode=require}
+    username: ${SPRING_R2DBC_USERNAME:postgres}
+
+logging:
+  level:
+    com.springaimcp: INFO
+    org.springframework.web: WARN

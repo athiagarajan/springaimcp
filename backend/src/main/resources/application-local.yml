@@ -1,0 +1,15 @@
+server:
+  port: 8080
+
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://${LOCAL_DB_HOST:dthiagar-ubuntu}:${LOCAL_DB_PORT:5432}/${LOCAL_DB_NAME:templeinfo}?sslmode=disable}
+    username: ${SPRING_DATASOURCE_USERNAME:templeinfo_user}
+  r2dbc:
+    url: ${SPRING_R2DBC_URL:r2dbc:postgresql://${LOCAL_DB_HOST:dthiagar-ubuntu}:${LOCAL_DB_PORT:5432}/${LOCAL_DB_NAME:templeinfo}?sslmode=disable}
+    username: ${SPRING_R2DBC_USERNAME:templeinfo_user}
+
+logging:
+  level:
+    com.springaimcp: DEBUG
+    org.springframework.web: INFO

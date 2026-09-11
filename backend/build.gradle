@@ -51,12 +51,14 @@ dependencyManagement {
 }
 
 tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
     options.compilerArgs << '--enable-preview'
 }
 
 tasks.withType(Test).configureEach {
     useJUnitPlatform()
-    jvmArgs '--enable-preview'
+    jvmArgs '--enable-preview', '-Dfile.encoding=UTF-8'
+    systemProperty 'file.encoding', 'UTF-8'
     finalizedBy jacocoTestReport
 }
 

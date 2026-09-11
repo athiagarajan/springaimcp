@@ -22,6 +22,10 @@ bin/
 # Environment & Temp logs
 *.log
 .env
+.env.*
+.env.local
+.env.render
+!.env.example
 *.sql
 .DS_Store
 Thumbs.db
