@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "build:dev": "tsc && vite build --mode development",
+    "build:render": "tsc && vite build --mode render",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run --coverage"

@@ -26,6 +26,9 @@ bin/
 .env.local
 .env.render
 !.env.example
+!frontend/.env.development
+!frontend/.env.render
+!frontend/.env.example
 *.sql
 .DS_Store
 Thumbs.db

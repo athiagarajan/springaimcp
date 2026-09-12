@@ -27,7 +27,7 @@ services:
     name: springaimcp-frontend
     runtime: static
     rootDir: frontend
-    buildCommand: npm run build
+    buildCommand: npm run build:render
     staticPublishPath: ./dist
     routes:
       - type: rewrite
