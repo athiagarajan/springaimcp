@@ -59,7 +59,7 @@ tasks.withType(Test).configureEach {
     useJUnitPlatform()
     jvmArgs '--enable-preview', '-Dfile.encoding=UTF-8'
     systemProperty 'file.encoding', 'UTF-8'
-    finalizedBy jacocoTestReport
+    finalizedBy jacocoTestReport, bootJar
 }
 
 jacoco {
