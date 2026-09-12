@@ -55,6 +55,10 @@ tasks.withType(JavaCompile).configureEach {
     options.compilerArgs << '--enable-preview'
 }
 
+jar {
+    enabled = false
+}
+
 tasks.withType(Test).configureEach {
     useJUnitPlatform()
     jvmArgs '--enable-preview', '-Dfile.encoding=UTF-8'

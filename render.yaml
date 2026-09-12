@@ -7,16 +7,18 @@ services:
     dockerContext: backend
     plan: free
     envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: render
       - key: SPRING_DATASOURCE_URL
-        value: jdbc:postgresql://pg-2ff57b18-alagesan-0eb8.b.aivencloud.com:15331/templeinfo?sslmode=require
+        value: jdbc:postgresql://templeinfo-db.cnwoi0c6ort7.us-east-2.rds.amazonaws.com:5432/templeinfo?sslmode=require
       - key: SPRING_DATASOURCE_USERNAME
-        value: avnadmin
+        value: postgres
       - key: SPRING_DATASOURCE_PASSWORD
         sync: false
       - key: SPRING_R2DBC_URL
-        value: r2dbc:postgresql://pg-2ff57b18-alagesan-0eb8.b.aivencloud.com:15331/templeinfo?sslmode=require
+        value: r2dbc:postgresql://templeinfo-db.cnwoi0c6ort7.us-east-2.rds.amazonaws.com:5432/templeinfo?sslmode=require
       - key: SPRING_R2DBC_USERNAME
-        value: avnadmin
+        value: postgres
       - key: SPRING_R2DBC_PASSWORD
         sync: false
       - key: GEMINI_API_KEY
