@@ -6,7 +6,7 @@ describe('API Services', () => {
     vi.restoreAllMocks();
   });
 
-  it('fetchAllTemples fetches temple records with basic auth headers', async () => {
+  it('fetchAllTemples fetches temple records', async () => {
     const mockTemples = [{ id: 494, name: 'Sri Idumban Temple' }];
     (globalThis as any).fetch = vi.fn().mockResolvedValue({
       ok: true,
@@ -15,6 +15,14 @@ describe('API Services', () => {
 
     const result = await fetchAllTemples();
     expect(result).toEqual(mockTemples);
+    expect((globalThis as any).fetch).toHaveBeenCalledWith(
+      '/api/v1/temples',
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
+    );
   });
 
   it('fetchAllTemples throws error on HTTP error response', async () => {

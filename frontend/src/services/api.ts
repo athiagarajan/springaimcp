@@ -1,6 +1,5 @@
 import { Temple, TempleImage } from '../types/temple';
 
-const BASIC_AUTH_HEADER = 'Basic ' + btoa('admin:adminpassword');
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
 const imageCache = new Map<number, TempleImage[]>();
@@ -12,7 +11,6 @@ export const fetchTempleImages = async (id: number): Promise<TempleImage[]> => {
 
   const response = await fetch(`${BASE_URL}/api/v1/temples/${id}/images`, {
     headers: {
-      Authorization: BASIC_AUTH_HEADER,
       'Content-Type': 'application/json',
     },
   });
@@ -31,7 +29,6 @@ export const fetchTempleImages = async (id: number): Promise<TempleImage[]> => {
 export const fetchAllTemples = async (): Promise<Temple[]> => {
   const response = await fetch(`${BASE_URL}/api/v1/temples`, {
     headers: {
-      Authorization: BASIC_AUTH_HEADER,
       'Content-Type': 'application/json',
     },
   });
@@ -46,7 +43,6 @@ export const fetchAllTemples = async (): Promise<Temple[]> => {
 export const searchTemples = async (query: string): Promise<Temple[]> => {
   const response = await fetch(`${BASE_URL}/api/v1/temples/search?keyword=${encodeURIComponent(query)}`, {
     headers: {
-      Authorization: BASIC_AUTH_HEADER,
       'Content-Type': 'application/json',
     },
   });
@@ -78,7 +74,6 @@ export const fetchTempleTranslation = async (id: number, targetLang: string = 't
 
   const response = await fetch(`${BASE_URL}/api/v1/temples/${id}/translate?targetLang=${encodeURIComponent(targetLang)}`, {
     headers: {
-      Authorization: BASIC_AUTH_HEADER,
       'Content-Type': 'application/json',
     },
   });
