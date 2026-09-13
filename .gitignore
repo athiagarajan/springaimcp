@@ -28,6 +28,7 @@ bin/
 !.env.example
 !frontend/.env.development
 !frontend/.env.render
+!frontend/.env.ubuntu
 !frontend/.env.example
 *.sql
 .DS_Store

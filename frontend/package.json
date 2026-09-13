@@ -8,8 +8,10 @@
     "build": "tsc && vite build",
     "build:dev": "tsc && vite build --mode development",
     "build:render": "tsc && vite build --mode render",
+    "build:ubuntu": "tsc && vite build --mode ubuntu",
     "lint": "eslint .",
     "preview": "vite preview",
+    "preview:ubuntu": "vite preview --mode ubuntu",
     "test": "vitest run --coverage"
   },
   "dependencies": {
