@@ -31,3 +31,7 @@ springdoc:
 temple:
   translation:
     gemini-api-key: ${GEMINI_API_KEY:}
+
+jwt:
+  secret: ${JWT_SECRET:c3ByaW5nYWltY3Atc2VjcmV0LWtleS0yNTYtYml0cy1sb25nLWZvci1qd3QtYXV0aC1zZWN1cml0eQ==}
+  expiration-ms: ${JWT_EXPIRATION_MS:86400000}

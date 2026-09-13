@@ -13,18 +13,25 @@ public class OpenAPIConfig {
 
     @Bean
     public OpenAPI springAiMcpOpenAPI() {
-        final String securitySchemeName = "basicAuth";
         return new OpenAPI()
             .info(new Info()
                 .title("springaimcp backend API")
-                .description("Protected streamable endpoints powered by Spring Boot 4 / Java 25, Spring AI 2.0, MCP, and PostgreSQL templeinfo database.")
+                .description("Protected streamable endpoints powered by Spring Boot, Spring AI, MCP, PostgreSQL, and JWT / Basic Auth.")
                 .version("v1.0.0"))
-            .addSecurityItem(new SecurityRequirement().addList(securitySchemeName))
+            .addSecurityItem(new SecurityRequirement().addList("bearerAuth").addList("basicAuth"))
             .components(new Components()
-                .addSecuritySchemes(securitySchemeName,
+                .addSecuritySchemes("bearerAuth",
                     new SecurityScheme()
-                        .name(securitySchemeName)
+                        .name("bearerAuth")
                         .type(SecurityScheme.Type.HTTP)
-                        .scheme("basic")));
+                        .scheme("bearer")
+                        .bearerFormat("JWT")
+                        .description("Enter your JWT token obtained from /api/v1/auth/login"))
+                .addSecuritySchemes("basicAuth",
+                    new SecurityScheme()
+                        .name("basicAuth")
+                        .type(SecurityScheme.Type.HTTP)
+                        .scheme("basic")
+                        .description("HTTP Basic Auth (admin:adminpassword)")));
     }
 }

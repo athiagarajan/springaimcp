@@ -13,8 +13,11 @@ import java.util.List;
 
 import static org.mockito.Mockito.when;
 
+import com.springaimcp.security.JwtAuthenticationFilter;
+import com.springaimcp.security.JwtTokenProvider;
+
 @WebFluxTest
-@Import(SecurityConfig.class)
+@Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtTokenProvider.class})
 class SecurityConfigTest {
 
     @Autowired
