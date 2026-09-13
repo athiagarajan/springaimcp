@@ -30,21 +30,32 @@ class SecurityConfigTest {
     private com.springaimcp.service.TempleImageService templeImageService;
 
     @Test
-    void testUnauthenticatedAccessToSwaggerReturns401() {
+    void testUnauthenticatedAccessToProtectedMeReturns401WithoutBasicAuthHeader() {
         webTestClient.get()
-                .uri("/swagger-ui.html")
+                .uri("/api/v1/auth/me")
                 .exchange()
-                .expectStatus().isUnauthorized();
+                .expectStatus().isUnauthorized()
+                .expectHeader().doesNotExist("WWW-Authenticate");
     }
 
     @Test
-    @WithMockUser(username = "admin", roles = {"ADMIN"})
-    void testAuthenticatedAdminAccessToApiReturns200() {
+    void testPublicTemplesEndpointIsPermitted() {
         when(templeAiService.getAllTemples()).thenReturn(List.of());
 
         webTestClient.get()
                 .uri("/api/v1/temples")
                 .exchange()
                 .expectStatus().isOk();
+    }
+
+    @Test
+    @WithMockUser(username = "admin", roles = {"ADMIN"})
+    void testAuthenticatedAdminAccessToProtectedMeReturns200() {
+        webTestClient.get()
+                .uri("/api/v1/auth/me")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.username").isEqualTo("admin");
     }
 }

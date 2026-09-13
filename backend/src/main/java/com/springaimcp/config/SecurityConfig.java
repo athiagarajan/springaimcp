@@ -13,6 +13,9 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.server.SecurityWebFilterChain;
 
+import org.springframework.http.HttpStatus;
+import reactor.core.publisher.Mono;
+
 @Configuration
 @EnableWebFluxSecurity
 public class SecurityConfig {
@@ -27,14 +30,21 @@ public class SecurityConfig {
     public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
         return http
             .csrf(ServerHttpSecurity.CsrfSpec::disable)
+            .httpBasic(ServerHttpSecurity.HttpBasicSpec::disable)
+            .formLogin(ServerHttpSecurity.FormLoginSpec::disable)
+            .exceptionHandling(exceptionHandling -> exceptionHandling
+                .authenticationEntryPoint((exchange, ex) -> Mono.fromRunnable(() -> 
+                    exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED)
+                ))
+            )
             .authorizeExchange(exchanges -> exchanges
                 .pathMatchers("/api/v1/auth/login", "/api/v1/auth/refresh").permitAll()
-                .pathMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/webjars/**").hasRole("ADMIN")
+                .pathMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/webjars/**").permitAll()
                 .pathMatchers("/api/v1/temples/**").permitAll()
+                .pathMatchers("/api/v1/auth/me").authenticated()
                 .anyExchange().permitAll()
             )
             .addFilterAt(jwtAuthenticationFilter, SecurityWebFiltersOrder.AUTHENTICATION)
-            .httpBasic(org.springframework.security.config.Customizer.withDefaults())
             .build();
     }
 
