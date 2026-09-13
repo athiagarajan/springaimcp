@@ -58,4 +58,13 @@ class SecurityConfigTest {
                 .expectBody()
                 .jsonPath("$.username").isEqualTo("admin");
     }
+
+    @Test
+    void testUnauthenticatedPostToTemplesReturns401WithoutBasicAuthHeader() {
+        webTestClient.post()
+                .uri("/api/v1/temples")
+                .exchange()
+                .expectStatus().isUnauthorized()
+                .expectHeader().doesNotExist("WWW-Authenticate");
+    }
 }

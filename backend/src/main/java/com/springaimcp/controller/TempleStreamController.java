@@ -3,7 +3,6 @@ package com.springaimcp.controller;
 import com.springaimcp.service.TempleAiService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
@@ -16,7 +15,6 @@ import java.util.Map;
 @RequestMapping("/api/v1/temples")
 @CrossOrigin(origins = "*")
 @Tag(name = "Streamable Temple AI APIs", description = "Server-Sent Events (SSE) streaming endpoints for dynamic queries and MCP responses")
-@SecurityRequirement(name = "basicAuth")
 public class TempleStreamController {
 
     private final TempleAiService templeAiService;

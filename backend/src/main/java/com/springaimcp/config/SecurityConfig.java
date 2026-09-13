@@ -13,6 +13,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.server.SecurityWebFilterChain;
 
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import reactor.core.publisher.Mono;
 
@@ -38,11 +39,14 @@ public class SecurityConfig {
                 ))
             )
             .authorizeExchange(exchanges -> exchanges
+                .pathMatchers(HttpMethod.OPTIONS).permitAll()
                 .pathMatchers("/api/v1/auth/login", "/api/v1/auth/refresh").permitAll()
                 .pathMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/webjars/**").permitAll()
-                .pathMatchers("/api/v1/temples/**").permitAll()
+                .pathMatchers(HttpMethod.GET, "/api/v1/temples/**").permitAll()
+                .pathMatchers("/api/v1/temples/**").authenticated()
                 .pathMatchers("/api/v1/auth/me").authenticated()
-                .anyExchange().permitAll()
+                .pathMatchers("/error").permitAll()
+                .anyExchange().authenticated()
             )
             .addFilterAt(jwtAuthenticationFilter, SecurityWebFiltersOrder.AUTHENTICATION)
             .build();

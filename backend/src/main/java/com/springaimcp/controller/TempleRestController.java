@@ -3,7 +3,6 @@ package com.springaimcp.controller;
 import com.springaimcp.model.Temple;
 import com.springaimcp.service.TempleAiService;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
@@ -14,7 +13,6 @@ import java.util.List;
 @RequestMapping("/api/v1/temples")
 @CrossOrigin(origins = "*")
 @Tag(name = "Temple REST Endpoints", description = "REST APIs for querying templeinfo database records directly")
-@SecurityRequirement(name = "basicAuth")
 public class TempleRestController {
 
     private final TempleAiService templeAiService;

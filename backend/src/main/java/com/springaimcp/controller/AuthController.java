@@ -3,6 +3,7 @@ package com.springaimcp.controller;
 import com.springaimcp.dto.AuthRequest;
 import com.springaimcp.dto.AuthResponse;
 import com.springaimcp.security.JwtTokenProvider;
+import io.swagger.v3.oas.annotations.Hidden;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
@@ -63,7 +64,7 @@ public class AuthController {
                 .defaultIfEmpty(ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
     }
 
-    @Operation(summary = "Get current authenticated user info", description = "Returns username and roles extracted from JWT")
+    @Hidden
     @GetMapping("/me")
     public Mono<ResponseEntity<Map<String, Object>>> getCurrentUser() {
         return ReactiveSecurityContextHolder.getContext()
