@@ -108,4 +108,23 @@ class TempleAiServiceTest {
         assertTrue(result.name().contains("श्री") || result.name().contains("मंदिर"));
         assertEquals("चिन्नालपट्टी", result.city());
     }
+
+    @Test
+    void testHasEnglishResidueDetection() {
+        // All translated
+        Temple clean = new Temple(1L, "மீனாட்சி அம்மன் கோயில்", "சுந்தரேஸ்வரர்", null, null, null, null, null, null, null, "மதுரை", "மதுரை", "தமிழ்நாடு", null, null, "பொது தகவல்", null, null, null, "சிறப்பு அம்சம்", "பிரார்த்தனை", null, null, "வரலாறு", null, 9.9, 78.1, null, null, null, null);
+        assertFalse(templeAiService.hasEnglishResidue(clean));
+
+        // Residue in speciality
+        Temple residueSpeciality = new Temple(1L, "மீனாட்சி அம்மன் கோயில்", "சுந்தரேஸ்வரர்", null, null, null, null, null, null, null, "மதுரை", "மதுரை", "தமிழ்நாடு", null, null, "பொது தகவல்", null, null, null, "This is English speciality", "பிரார்த்தனை", null, null, "வரலாறு", null, 9.9, 78.1, null, null, null, null);
+        assertTrue(templeAiService.hasEnglishResidue(residueSpeciality));
+
+        // Residue in history
+        Temple residueHistory = new Temple(1L, "மீனாட்சி அம்மன் கோயில்", "சுந்தரேஸ்வரர்", null, null, null, null, null, null, null, "மதுரை", "மதுரை", "தமிழ்நாடு", null, null, "பொது தகவல்", null, null, null, "சிறப்பு அம்சம்", "பிரார்த்தனை", null, null, "Ancient history of Lord Shiva", null, 9.9, 78.1, null, null, null, null);
+        assertTrue(templeAiService.hasEnglishResidue(residueHistory));
+
+        // Residue in moolavar
+        Temple residueMoolavar = new Temple(1L, "மீனாட்சி அம்மன் கோயில்", "Lord Sundareswarar", null, null, null, null, null, null, null, "மதுரை", "மதுரை", "தமிழ்நாடு", null, null, "பொது தகவல்", null, null, null, "சிறப்பு அம்சம்", "பிரார்த்தனை", null, null, "வரலாறு", null, 9.9, 78.1, null, null, null, null);
+        assertTrue(templeAiService.hasEnglishResidue(residueMoolavar));
+    }
 }

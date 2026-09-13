@@ -29,11 +29,10 @@ public class TempleAiService {
     private String geminiApiKey;
 
     private static final List<String> GEMINI_MODELS = List.of(
-            "gemini-flash-latest",
-            "gemini-3.6-flash",
-            "gemini-3.5-flash-lite",
-            "gemini-3.1-flash-lite",
-            "gemini-flash-lite-latest"
+            "gemini-2.0-flash",
+            "gemini-1.5-flash",
+            "gemini-2.0-flash-lite",
+            "gemini-1.5-pro"
     );
 
     private static final Map<String, double[]> KNOWN_COORDINATES = Map.ofEntries(
@@ -303,20 +302,17 @@ public class TempleAiService {
                 Temple cached = translationCache.get(cacheKey);
                 if (!hasEnglishResidue(cached)) {
                     return cached;
+                } else {
+                    translationCache.remove(cacheKey);
                 }
             }
 
             if (geminiApiKey != null && !geminiApiKey.isBlank()) {
                 try {
                     Temple translated = translateWithGemini(original, lang, geminiApiKey);
-                    boolean isValidTranslation = translated != null 
+                    if (translated != null 
                         && !translated.name().equalsIgnoreCase(original.name())
-                        && !hasEnglishResidue(translated);
-                    if (isValidTranslation) {
-                        translationCache.put(cacheKey, translated);
-                        return translated;
-                    }
-                    if (translated != null && !translated.name().equalsIgnoreCase(original.name())) {
+                        && !hasEnglishResidue(translated)) {
                         translationCache.put(cacheKey, translated);
                         return translated;
                     }
@@ -327,7 +323,9 @@ public class TempleAiService {
 
             Temple fallback = fallbackTranslator.translate(original, lang);
             if (fallback != null && !fallback.name().equalsIgnoreCase(original.name())) {
-                translationCache.put(cacheKey, fallback);
+                if (!hasEnglishResidue(fallback)) {
+                    translationCache.put(cacheKey, fallback);
+                }
                 return fallback;
             }
             return original;
@@ -335,11 +333,22 @@ public class TempleAiService {
         .subscribeOn(Schedulers.boundedElastic());
     }
 
-    private boolean hasEnglishResidue(Temple temple) {
+    public boolean hasEnglishResidue(Temple temple) {
         if (temple == null) return true;
-        if (temple.name() != null && temple.name().matches(".*[a-zA-Z]{3,}.*")) return true;
-        if (temple.city() != null && temple.city().matches(".*[a-zA-Z]{4,}.*")) return true;
+        if (hasFieldEnglish(temple.name(), 3)) return true;
+        if (hasFieldEnglish(temple.city(), 4)) return true;
+        if (hasFieldEnglish(temple.moolavar(), 4)) return true;
+        if (hasFieldEnglish(temple.district(), 4)) return true;
+        if (hasFieldEnglish(temple.speciality(), 4)) return true;
+        if (hasFieldEnglish(temple.history(), 4)) return true;
+        if (hasFieldEnglish(temple.prayers(), 4)) return true;
+        if (hasFieldEnglish(temple.generalInformation(), 4)) return true;
         return false;
+    }
+
+    private boolean hasFieldEnglish(String text, int minLength) {
+        if (text == null || text.isBlank()) return false;
+        return text.matches(".*[a-zA-Z]{" + minLength + ",}.*");
     }
 
     private Temple translateWithGemini(Temple original, String targetLang, String apiKey) {
@@ -535,13 +544,13 @@ public class TempleAiService {
             }
         }
 
-        if (bestEffortTranslation != null) {
+        if (bestEffortTranslation != null && !hasEnglishResidue(bestEffortTranslation)) {
             log.warn("Using best-effort translation for temple {} to {} after evaluating all models", original.id(), targetLang);
             return bestEffortTranslation;
         }
 
-        log.error("All Gemini models failed to translate temple {} to {}. Falling back to original English.", original.id(), targetLang);
-        return original;
+        log.warn("All Gemini models failed or left English residue for temple {} to {}. Falling back to neural translation.", original.id(), targetLang);
+        return null;
     }
 
     private String callGeminiApi(String promptText, boolean jsonMode) {

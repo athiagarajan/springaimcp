@@ -301,21 +301,21 @@ public class TempleTranslationFallback {
         if ("en".equals(lang)) return original;
 
         CompletableFuture<String> name = CompletableFuture.supplyAsync(() -> translateField(original.name(), lang, true));
-        CompletableFuture<String> moolavar = CompletableFuture.supplyAsync(() -> translateField(original.moolavar(), lang, false));
-        CompletableFuture<String> urchavar = CompletableFuture.supplyAsync(() -> translateField(original.urchavar(), lang, false));
-        CompletableFuture<String> ammanThayar = CompletableFuture.supplyAsync(() -> translateField(original.ammanThayar(), lang, false));
-        CompletableFuture<String> thalaVirutcham = CompletableFuture.supplyAsync(() -> translateField(original.thalaVirutcham(), lang, false));
-        CompletableFuture<String> theertham = CompletableFuture.supplyAsync(() -> translateField(original.theertham(), lang, false));
-        CompletableFuture<String> agamamPooja = CompletableFuture.supplyAsync(() -> translateField(original.agamamPooja(), lang, false));
+        CompletableFuture<String> moolavar = CompletableFuture.supplyAsync(() -> translateField(original.moolavar(), lang, true));
+        CompletableFuture<String> urchavar = CompletableFuture.supplyAsync(() -> translateField(original.urchavar(), lang, true));
+        CompletableFuture<String> ammanThayar = CompletableFuture.supplyAsync(() -> translateField(original.ammanThayar(), lang, true));
+        CompletableFuture<String> thalaVirutcham = CompletableFuture.supplyAsync(() -> translateField(original.thalaVirutcham(), lang, true));
+        CompletableFuture<String> theertham = CompletableFuture.supplyAsync(() -> translateField(original.theertham(), lang, true));
+        CompletableFuture<String> agamamPooja = CompletableFuture.supplyAsync(() -> translateField(original.agamamPooja(), lang, true));
         CompletableFuture<String> oldYear = CompletableFuture.supplyAsync(() -> translateField(original.oldYear(), lang, false));
-        CompletableFuture<String> historicalName = CompletableFuture.supplyAsync(() -> translateField(original.historicalName(), lang, false));
-        CompletableFuture<String> city = CompletableFuture.supplyAsync(() -> translateField(original.city(), lang, false));
-        CompletableFuture<String> district = CompletableFuture.supplyAsync(() -> translateField(original.district(), lang, false));
-        CompletableFuture<String> state = CompletableFuture.supplyAsync(() -> translateField(original.state(), lang, false));
-        CompletableFuture<String> singers = CompletableFuture.supplyAsync(() -> translateField(original.singers(), lang, false));
+        CompletableFuture<String> historicalName = CompletableFuture.supplyAsync(() -> translateField(original.historicalName(), lang, true));
+        CompletableFuture<String> city = CompletableFuture.supplyAsync(() -> translateField(original.city(), lang, true));
+        CompletableFuture<String> district = CompletableFuture.supplyAsync(() -> translateField(original.district(), lang, true));
+        CompletableFuture<String> state = CompletableFuture.supplyAsync(() -> translateField(original.state(), lang, true));
+        CompletableFuture<String> singers = CompletableFuture.supplyAsync(() -> translateField(original.singers(), lang, true));
         CompletableFuture<String> festival = CompletableFuture.supplyAsync(() -> translateField(original.festival(), lang, false));
         CompletableFuture<String> generalInformation = CompletableFuture.supplyAsync(() -> translateField(original.generalInformation(), lang, false));
-        CompletableFuture<String> address = CompletableFuture.supplyAsync(() -> translateField(original.address(), lang, false));
+        CompletableFuture<String> address = CompletableFuture.supplyAsync(() -> translateField(original.address(), lang, true));
         CompletableFuture<String> openingTime = CompletableFuture.supplyAsync(() -> translateField(original.openingTime(), lang, false));
         CompletableFuture<String> speciality = CompletableFuture.supplyAsync(() -> translateField(original.speciality(), lang, false));
         CompletableFuture<String> prayers = CompletableFuture.supplyAsync(() -> translateField(original.prayers(), lang, false));
@@ -323,9 +323,9 @@ public class TempleTranslationFallback {
         CompletableFuture<String> greatness = CompletableFuture.supplyAsync(() -> translateField(original.greatness(), lang, false));
         CompletableFuture<String> history = CompletableFuture.supplyAsync(() -> translateField(original.history(), lang, false));
         CompletableFuture<String> features = CompletableFuture.supplyAsync(() -> translateField(original.features(), lang, false));
-        CompletableFuture<String> location = CompletableFuture.supplyAsync(() -> translateField(original.location(), lang, false));
-        CompletableFuture<String> nearByAirport = CompletableFuture.supplyAsync(() -> translateField(original.nearByAirport(), lang, false));
-        CompletableFuture<String> nearByRailwayStation = CompletableFuture.supplyAsync(() -> translateField(original.nearByRailwayStation(), lang, false));
+        CompletableFuture<String> location = CompletableFuture.supplyAsync(() -> translateField(original.location(), lang, true));
+        CompletableFuture<String> nearByAirport = CompletableFuture.supplyAsync(() -> translateField(original.nearByAirport(), lang, true));
+        CompletableFuture<String> nearByRailwayStation = CompletableFuture.supplyAsync(() -> translateField(original.nearByRailwayStation(), lang, true));
         CompletableFuture<String> accommodation = CompletableFuture.supplyAsync(() -> translateField(original.accommodation(), lang, false));
 
         CompletableFuture.allOf(
@@ -435,47 +435,92 @@ public class TempleTranslationFallback {
     }
 
     private String translateWithNeuralApi(String text, String targetLang) {
-        String myMemory = translateWithMyMemory(text, targetLang);
-        if (myMemory != null && !myMemory.isBlank()) {
-            return myMemory;
-        }
         String gtx = translateWithGtx(text, targetLang);
-        if (gtx != null && !gtx.isBlank()) {
+        if (gtx != null && !gtx.isBlank() && containsAppropriateScript(gtx, targetLang)) {
             return gtx;
+        }
+        String myMemory = translateWithMyMemory(text, targetLang);
+        if (myMemory != null && !myMemory.isBlank() && containsAppropriateScript(myMemory, targetLang)) {
+            return myMemory;
         }
         return null;
     }
 
     private String translateWithGtx(String text, String targetLang) {
-        try {
-            String encoded = URLEncoder.encode(text, StandardCharsets.UTF_8);
-            String urlStr = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl="
-                    + targetLang + "&dt=t&q=" + encoded;
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(urlStr))
-                    .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
-                    .timeout(Duration.ofSeconds(6))
-                    .GET()
-                    .build();
+        if (text == null || text.isBlank()) return null;
 
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
-            if (response.statusCode() == 200 && response.body() != null) {
-                JsonNode root = objectMapper.readTree(response.body());
-                if (root.isArray() && root.size() > 0 && root.get(0).isArray()) {
-                    StringBuilder sb = new StringBuilder();
-                    for (JsonNode chunk : root.get(0)) {
-                        if (chunk.isArray() && chunk.size() > 0 && !chunk.get(0).isNull()) {
-                            sb.append(chunk.get(0).asText());
-                        }
+        // If text is long (> 600 characters), chunk it on sentence boundaries
+        if (text.length() > 600) {
+            String[] sentences = text.split("(?<=[.!?\\n])\\s+");
+            StringBuilder combined = new StringBuilder();
+            StringBuilder currentBatch = new StringBuilder();
+
+            for (String sentence : sentences) {
+                if (sentence.isBlank()) continue;
+                if (currentBatch.length() + sentence.length() > 500) {
+                    String trans = translateWithGtxChunk(currentBatch.toString().trim(), targetLang);
+                    if (trans != null && !trans.isBlank()) {
+                        if (combined.length() > 0) combined.append(" ");
+                        combined.append(trans);
+                    } else {
+                        return null;
                     }
-                    String result = sb.toString().trim();
-                    if (!result.isBlank()) {
-                        return result;
-                    }
+                    currentBatch.setLength(0);
+                }
+                if (currentBatch.length() > 0) currentBatch.append(" ");
+                currentBatch.append(sentence);
+            }
+            if (currentBatch.length() > 0) {
+                String trans = translateWithGtxChunk(currentBatch.toString().trim(), targetLang);
+                if (trans != null && !trans.isBlank()) {
+                    if (combined.length() > 0) combined.append(" ");
+                    combined.append(trans);
+                } else {
+                    return null;
                 }
             }
-        } catch (Exception e) {
-            log.debug("GTX translation skipped/failed for '{}' ({}): {}", text, targetLang, e.getMessage());
+            return combined.length() > 0 ? combined.toString() : null;
+        }
+
+        return translateWithGtxChunk(text, targetLang);
+    }
+
+    private String translateWithGtxChunk(String text, String targetLang) {
+        if (text == null || text.isBlank()) return null;
+        for (int attempt = 1; attempt <= 2; attempt++) {
+            try {
+                String body = "client=gtx&sl=en&tl=" + targetLang + "&dt=t&q=" + URLEncoder.encode(text, StandardCharsets.UTF_8);
+                HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create("https://translate.googleapis.com/translate_a/single"))
+                        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
+                        .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
+                        .header("Accept", "*/*")
+                        .timeout(Duration.ofSeconds(8))
+                        .POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8))
+                        .build();
+
+                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+                if (response.statusCode() == 200 && response.body() != null) {
+                    JsonNode root = objectMapper.readTree(response.body());
+                    if (root.isArray() && root.size() > 0 && root.get(0).isArray()) {
+                        StringBuilder sb = new StringBuilder();
+                        for (JsonNode chunk : root.get(0)) {
+                            if (chunk.isArray() && chunk.size() > 0 && !chunk.get(0).isNull()) {
+                                sb.append(chunk.get(0).asText());
+                            }
+                        }
+                        String result = sb.toString().trim();
+                        if (!result.isBlank()) {
+                            return result;
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.debug("GTX translation attempt {} failed for '{}' ({}): {}", attempt, text, targetLang, e.getMessage());
+                if (attempt < 2) {
+                    try { Thread.sleep(200); } catch (InterruptedException ignored) {}
+                }
+            }
         }
         return null;
     }
@@ -517,7 +562,7 @@ public class TempleTranslationFallback {
             if (response.statusCode() == 200 && response.body() != null) {
                 JsonNode root = objectMapper.readTree(response.body());
                 String trans = root.path("responseData").path("translatedText").asText();
-                if (trans != null && !trans.isBlank() && !trans.startsWith("MYMEMORY WARNING")) {
+                if (trans != null && !trans.isBlank() && !trans.startsWith("MYMEMORY WARNING") && containsAppropriateScript(trans, targetLang)) {
                     return trans.trim();
                 }
             }
