@@ -17,7 +17,7 @@ import com.springaimcp.security.JwtAuthenticationFilter;
 import com.springaimcp.security.JwtTokenProvider;
 
 @WebFluxTest
-@Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtTokenProvider.class})
+@Import({SecurityConfig.class, CorsConfig.class, JwtAuthenticationFilter.class, JwtTokenProvider.class})
 class SecurityConfigTest {
 
     @Autowired

@@ -3,6 +3,7 @@ package com.springaimcp.config;
 import com.springaimcp.security.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.SecurityWebFiltersOrder;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
@@ -17,20 +18,25 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import reactor.core.publisher.Mono;
 
+import org.springframework.web.cors.reactive.CorsConfigurationSource;
+
 @Configuration
 @EnableWebFluxSecurity
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final CorsConfigurationSource corsConfigurationSource;
 
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter, CorsConfigurationSource corsConfigurationSource) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.corsConfigurationSource = corsConfigurationSource;
     }
 
     @Bean
     public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
         return http
             .csrf(ServerHttpSecurity.CsrfSpec::disable)
+            .cors(cors -> cors.configurationSource(corsConfigurationSource))
             .httpBasic(ServerHttpSecurity.HttpBasicSpec::disable)
             .formLogin(ServerHttpSecurity.FormLoginSpec::disable)
             .exceptionHandling(exceptionHandling -> exceptionHandling
@@ -42,8 +48,8 @@ public class SecurityConfig {
                 .pathMatchers(HttpMethod.OPTIONS).permitAll()
                 .pathMatchers("/api/v1/auth/login", "/api/v1/auth/refresh").permitAll()
                 .pathMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/webjars/**").permitAll()
-                .pathMatchers(HttpMethod.GET, "/api/v1/temples/**").permitAll()
-                .pathMatchers("/api/v1/temples/**").authenticated()
+                .pathMatchers(HttpMethod.GET, "/api/v1/temples", "/api/v1/temples/**").permitAll()
+                .pathMatchers("/api/v1/temples", "/api/v1/temples/**").authenticated()
                 .pathMatchers("/api/v1/auth/me").authenticated()
                 .pathMatchers("/error").permitAll()
                 .anyExchange().authenticated()

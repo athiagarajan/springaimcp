@@ -1,5 +1,6 @@
 package com.springaimcp.controller;
 
+import com.springaimcp.config.CorsConfig;
 import com.springaimcp.config.SecurityConfig;
 import com.springaimcp.dto.AuthRequest;
 import com.springaimcp.security.JwtAuthenticationFilter;
@@ -12,7 +13,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
 @WebFluxTest(controllers = AuthController.class)
-@Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtTokenProvider.class})
+@Import({SecurityConfig.class, CorsConfig.class, JwtAuthenticationFilter.class, JwtTokenProvider.class})
 class AuthControllerTest {
 
     @Autowired

@@ -13,3 +13,6 @@ logging:
   level:
     com.springaimcp: DEBUG
     org.springframework.web: INFO
+
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173}

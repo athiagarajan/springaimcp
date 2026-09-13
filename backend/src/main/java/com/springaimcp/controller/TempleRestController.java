@@ -11,7 +11,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/temples")
-@CrossOrigin(origins = "*")
 @Tag(name = "Temple REST Endpoints", description = "REST APIs for querying templeinfo database records directly")
 public class TempleRestController {
 

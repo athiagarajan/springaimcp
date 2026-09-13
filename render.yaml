@@ -23,6 +23,8 @@ services:
         sync: false
       - key: GEMINI_API_KEY
         sync: false
+      - key: CORS_ALLOWED_ORIGINS
+        value: https://springaimcp-frontend.onrender.com,http://localhost:3000
 
   # 2. Frontend Static Site (Vite React 18 -> https://springaimcp-frontend.onrender.com)
   - type: web
